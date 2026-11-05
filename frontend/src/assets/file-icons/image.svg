@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-label="图片">
+  <title>图片</title>
+  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#8D4FB3" fill-opacity=".035" stroke="#B58DCE" stroke-width=".9" stroke-linejoin="round"/>
+  <path d="M14 2v4.5A1.5 1.5 0 0 0 15.5 8H20" stroke="#B58DCE" stroke-width=".9" stroke-linejoin="round"/>
+  <g transform="translate(3 4.5) scale(.75)" color="#9861BB" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="1.1" fill="currentColor" stroke="none"/><path d="m6 16 4.5-5 3.2 3 2.3-2 2 4"/></g>
+</svg>

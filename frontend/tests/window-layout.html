@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>窗口布局回归检查</title></head>
+<body>
+<div id="app"></div>
+<!-- Run npm run dev, then open /tests/window-layout.html. -->
+<script type="module">
+import '../src/main.ts'
+import { nextTick } from 'vue'
+import { version } from '../package.json'
+
+const assert=(condition,message)=>{if(!condition)throw new Error(message)}
+const state=document.querySelector('#app').__vue_app__._instance.setupState
+const saved=localStorage.getItem('xfile.sidebarWidth'),originalWidth=state.sidebarWidth
+const separator=document.querySelector('.sidebar-resizer')
+const key=async value=>{separator.dispatchEvent(new KeyboardEvent('keydown',{key:value,bubbles:true}));await nextTick()}
+try{
+ state.locations=[{name:'测试目录',path:'/window-check'}];state.favorites=['/window-check/favorite']
+ await nextTick()
+ assert(!document.querySelector('.brand'),'左上角仍显示 Logo')
+ await key('Home')
+ const sidebar=document.querySelector('.sidebar').getBoundingClientRect()
+ assert(sidebar.width===Number(separator.getAttribute('aria-valuemin')),'侧栏未缩小到最小宽度')
+ assert(document.querySelector('.app-shell').classList.contains('sidebar-compact'),'窄侧栏未切换为图标模式')
+ for(const button of document.querySelectorAll('.sidebar .nav-item')){
+  const icon=button.querySelector('svg,img').getBoundingClientRect()
+  assert(icon.width>0&&icon.left>=sidebar.left&&icon.right<=sidebar.right,'窄侧栏图标被裁切')
+  assert(button.getAttribute('aria-label')&&button.title,'窄侧栏缺少可访问名称或悬停提示')
+ }
+ await key('End')
+ const widest=document.querySelector('.sidebar').getBoundingClientRect().width
+ assert(widest===Number(separator.getAttribute('aria-valuemax')),'侧栏超出最大宽度')
+ await key('ArrowLeft')
+ assert(document.querySelector('.sidebar').getBoundingClientRect().width<widest,'键盘无法调整宽度')
+ assert(Number(localStorage.getItem('xfile.sidebarWidth'))===document.querySelector('.sidebar').getBoundingClientRect().width,'侧栏宽度未保存')
+ const trigger=document.querySelector('.settings-trigger')
+ trigger.click();await nextTick()
+ document.querySelector('.app-settings [role=menuitem]').click();await nextTick()
+ const dialog=document.querySelector('.about-dialog'),rect=dialog.getBoundingClientRect(),image=dialog.querySelector('img')
+ await image.decode()
+ const icon=image.getBoundingClientRect()
+ assert(dialog.open&&dialog.textContent.includes(version),'关于内容缺失')
+ const repository=dialog.querySelector('.about-repository')
+ assert(repository?.getAttribute('href')==='https://github.com/xiaoke4869/xfile'&&repository.textContent.trim()==='xiaoke4869/xfile','GitHub 仓库链接错误')
+ assert(repository.target==='_blank'&&repository.relList.contains('noopener')&&repository.relList.contains('noreferrer'),'仓库链接缺少安全的新窗口属性')
+ assert(Math.abs(rect.left+rect.width/2-innerWidth/2)<1&&Math.abs(rect.top+rect.height/2-innerHeight/2)<1,'关于弹窗未居中')
+ assert(Math.abs(icon.left+icon.width/2-rect.left-rect.width/2)<1,'关于图标未居中')
+ dialog.querySelector('.about-close').click()
+ await new Promise(requestAnimationFrame)
+ assert(!dialog.open&&document.activeElement===trigger,'关闭关于后未恢复焦点')
+ window.windowLayoutResult={passed:true}
+ document.title='PASS · 窗口布局回归检查'
+}catch(error){
+ window.windowLayoutResult={passed:false,error:String(error)}
+ document.title='FAIL · '+error.message
+ console.error(error)
+}finally{
+ state.sidebarWidth=originalWidth
+ if(saved===null)localStorage.removeItem('xfile.sidebarWidth');else localStorage.setItem('xfile.sidebarWidth',saved)
+}
+</script>
+</body>
+</html>

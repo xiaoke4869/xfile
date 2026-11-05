@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>选择栏布局回归检查</title></head>
+<body>
+<div id="app"></div>
+<!-- Run npm run dev, then open /tests/selection-layout.html in Chromium or WebKit. -->
+<script type="module">
+import '../src/main.ts'
+import { nextTick } from 'vue'
+
+const state=document.querySelector('#app').__vue_app__._instance.setupState
+const assert=(condition,message)=>{if(!condition)throw new Error(message)}
+const bounds=selector=>document.querySelector(selector).getBoundingClientRect()
+const click=label=>[...document.querySelectorAll('.selection-actions button')].find(button=>button.textContent===label).click()
+try{
+ state.path='/selection-check'
+ state.entries=Array.from({length:205},(_,i)=>({path:`/selection-check/${i}`,name:`file ${i}.txt`,dir:false,link:false,size:i,modified:0}))
+ await nextTick()
+ const before=bounds('tbody tr'),columns=[...document.querySelectorAll('tbody tr:first-child td')].map(cell=>cell.getBoundingClientRect().width)
+ document.querySelector('tbody input').click()
+ await nextTick()
+ const header=bounds('thead'),bar=bounds('.selection-actions'),after=bounds('tbody tr')
+ assert(bar.top>=header.top&&bar.bottom<=header.bottom,'选择栏超出表头、遮挡文件列表')
+ assert(before.top===after.top&&before.height===after.height,'选择时文件行发生跳动')
+ assert(columns.every((width,i)=>Math.abs(width-document.querySelectorAll('tbody tr:first-child td')[i].getBoundingClientRect().width)<1),'选择时列宽发生变化')
+ for(const button of document.querySelectorAll('.selection-actions button')){
+  const rect=button.getBoundingClientRect(),hit=document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2)
+  assert(button.contains(hit),'选择栏按钮被遮挡或无法点击')
+ }
+ click('全选')
+ await nextTick()
+ assert(state.selected.length===205,'全选未覆盖所有分页')
+ click('反选')
+ await nextTick()
+ assert(!state.selected.length&&!document.querySelector('.selection-actions'),'反选后选择栏未恢复')
+ assert(bounds('tbody tr').top===before.top,'反选后文件行发生跳动')
+ document.querySelector('tbody input').click()
+ await nextTick()
+ const scroll=document.querySelector('.table-scroll')
+ scroll.scrollTop=300
+ await new Promise(resolve=>setTimeout(resolve,100))
+ assert(Math.abs(bounds('thead').top-scroll.getBoundingClientRect().top)<1,'滚动后表头未固定')
+ assert(bounds('.selection-actions').bottom<=bounds('thead').bottom,'滚动后选择栏超出表头')
+ state.selected=[];state.entries=[];state.path='/selection-check/empty'
+ await nextTick()
+ assert(!document.querySelector('.selection-actions'),'进入空目录后选择栏残留')
+ window.selectionLayoutResult={passed:true}
+ document.title='PASS · 选择栏布局回归检查'
+}catch(error){
+ window.selectionLayoutResult={passed:false,error:String(error)}
+ document.title='FAIL · '+error.message
+ console.error(error)
+}
+</script>
+</body>
+</html>

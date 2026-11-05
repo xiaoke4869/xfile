@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>文件操作日志界面检查</title></head>
+<body>
+<div id="app"></div>
+<!-- Run npm run dev, then open /tests/activity-layout.html. -->
+<script type="module">
+import '../src/main.ts'
+import { nextTick } from 'vue'
+
+const state=document.querySelector('#app').__vue_app__._instance.setupState
+const assert=(condition,message)=>{if(!condition)throw new Error(message)}
+try{
+ state.path='/activity-check'
+ await nextTick()
+ assert(getComputedStyle(document.querySelector('.directory-title')).userSelect==='none','顶部标题仍可选择文字')
+ const common={status:'succeeded',total:1,moved:1,error:'',started:new Date().toISOString(),unknown:0}
+ state.tasks=['copy','move','rename','delete','create_folder'].map((operation,i)=>({...common,operation,id:`activity-${i}`}))
+ state.tasks.push({...common,id:'old-merge'})
+ state.view='tasks'
+ await nextTick()
+ const cards=[...document.querySelectorAll('.task-card')]
+ for(const [i,label] of ['复制','移动','重命名','删除','新建文件夹'].entries()){
+  assert(cards[i].querySelector('h3').textContent.includes(label),'日志缺少操作类型：'+label)
+  assert(cards[i].textContent.includes('个项目已完成')&&!cards[i].textContent.includes('个文件已移动'),'普通操作仍按归并移动展示')
+ }
+ assert(cards[5].textContent.includes('个文件已移动'),'历史归并记录展示不兼容')
+ document.querySelector('[aria-label="任务与日志说明"]').click()
+ await nextTick()
+ const help=document.querySelector('[role=tooltip]').textContent
+ assert(help.includes('重命名')&&help.includes('只读操作不记录'),'日志说明未更新')
+ state.operationTask={...common,id:'partial',operation:'move',status:'partial_failed',total:2,items:[{source:'/source/a.txt',target:'/target/a.txt',error:''},{source:'/source/b.txt',target:'',error:'目标不可写'}]}
+ await nextTick()
+ document.querySelector('.operation-dialog').showModal()
+ const dialog=document.querySelector('.operation-dialog')
+ assert(dialog.textContent.includes('移动结果')&&dialog.textContent.includes('部分完成'),'部分完成状态缺失')
+ assert(dialog.textContent.includes('/source/a.txt')&&dialog.textContent.includes('/target/a.txt')&&dialog.textContent.includes('目标不可写'),'逐项路径或错误缺失')
+ assert(!dialog.textContent.includes('核对并恢复'),'普通操作误显示归并恢复')
+ dialog.close()
+ window.activityLayoutResult={passed:true}
+ document.title='PASS · 文件操作日志界面检查'
+}catch(error){
+ window.activityLayoutResult={passed:false,error:String(error)}
+ document.title='FAIL · '+error.message
+ console.error(error)
+}
+</script>
+</body>
+</html>

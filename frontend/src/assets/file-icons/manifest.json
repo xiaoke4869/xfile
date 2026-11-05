@@ -1,0 +1,1167 @@
+{
+  "icons": [
+    {
+      "id": "file",
+      "category": "通用文件",
+      "color": "#718096",
+      "label": "普通文件",
+      "description": "普通文件",
+      "extensions": [],
+      "names": []
+    },
+    {
+      "id": "unknown",
+      "category": "通用文件",
+      "color": "#718096",
+      "label": "未知格式",
+      "description": "未知格式",
+      "extensions": [],
+      "names": []
+    },
+    {
+      "id": "no-extension",
+      "category": "通用文件",
+      "color": "#718096",
+      "label": "无扩展名文件",
+      "description": "无扩展名文件",
+      "extensions": [],
+      "names": []
+    },
+    {
+      "id": "txt",
+      "category": "文本与标记",
+      "color": "#526782",
+      "label": "TXT",
+      "description": "TXT",
+      "extensions": [
+        "txt"
+      ],
+      "names": []
+    },
+    {
+      "id": "markdown",
+      "category": "文本与标记",
+      "color": "#526782",
+      "label": "Markdown",
+      "description": "Markdown",
+      "extensions": [
+        "md",
+        "markdown"
+      ],
+      "names": []
+    },
+    {
+      "id": "log",
+      "category": "文本与标记",
+      "color": "#526782",
+      "label": "日志",
+      "description": "日志",
+      "extensions": [
+        "log"
+      ],
+      "names": []
+    },
+    {
+      "id": "rtf",
+      "category": "文本与标记",
+      "color": "#526782",
+      "label": "RTF",
+      "description": "RTF",
+      "extensions": [
+        "rtf"
+      ],
+      "names": []
+    },
+    {
+      "id": "tex",
+      "category": "文本与标记",
+      "color": "#526782",
+      "label": "LaTeX",
+      "description": "LaTeX",
+      "extensions": [
+        "tex"
+      ],
+      "names": []
+    },
+    {
+      "id": "word",
+      "category": "Office 文档",
+      "color": "#3265BE",
+      "label": "Word",
+      "description": "Word",
+      "extensions": [
+        "doc",
+        "docx",
+        "docm",
+        "dot",
+        "dotx"
+      ],
+      "names": []
+    },
+    {
+      "id": "excel",
+      "category": "Office 文档",
+      "color": "#25815C",
+      "label": "Excel",
+      "description": "Excel",
+      "extensions": [
+        "xls",
+        "xlsx",
+        "xlsm",
+        "xlsb",
+        "xlt",
+        "xltx"
+      ],
+      "names": []
+    },
+    {
+      "id": "powerpoint",
+      "category": "Office 文档",
+      "color": "#C05A31",
+      "label": "PowerPoint",
+      "description": "PowerPoint",
+      "extensions": [
+        "ppt",
+        "pptx",
+        "pptm",
+        "pps",
+        "ppsx",
+        "potx"
+      ],
+      "names": []
+    },
+    {
+      "id": "pdf",
+      "category": "PDF 与电子书",
+      "color": "#BD4554",
+      "label": "PDF",
+      "description": "PDF",
+      "extensions": [
+        "pdf"
+      ],
+      "names": []
+    },
+    {
+      "id": "ebook",
+      "category": "PDF 与电子书",
+      "color": "#BD4554",
+      "label": "电子书",
+      "description": "电子书",
+      "extensions": [
+        "epub",
+        "mobi",
+        "azw",
+        "azw3"
+      ],
+      "names": []
+    },
+    {
+      "id": "odt",
+      "category": "其他办公文档",
+      "color": "#3265BE",
+      "label": "OpenDocument 文档",
+      "description": "OpenDocument 文档",
+      "extensions": [
+        "odt"
+      ],
+      "names": []
+    },
+    {
+      "id": "pages",
+      "category": "其他办公文档",
+      "color": "#3265BE",
+      "label": "Pages",
+      "description": "Pages",
+      "extensions": [
+        "pages"
+      ],
+      "names": []
+    },
+    {
+      "id": "csv",
+      "category": "其他办公文档",
+      "color": "#25815C",
+      "label": "CSV",
+      "description": "CSV",
+      "extensions": [
+        "csv"
+      ],
+      "names": []
+    },
+    {
+      "id": "tsv",
+      "category": "其他办公文档",
+      "color": "#25815C",
+      "label": "TSV",
+      "description": "TSV",
+      "extensions": [
+        "tsv"
+      ],
+      "names": []
+    },
+    {
+      "id": "ods",
+      "category": "其他办公文档",
+      "color": "#25815C",
+      "label": "OpenDocument 表格",
+      "description": "OpenDocument 表格",
+      "extensions": [
+        "ods"
+      ],
+      "names": []
+    },
+    {
+      "id": "numbers",
+      "category": "其他办公文档",
+      "color": "#25815C",
+      "label": "Numbers",
+      "description": "Numbers",
+      "extensions": [
+        "numbers"
+      ],
+      "names": []
+    },
+    {
+      "id": "odp",
+      "category": "其他办公文档",
+      "color": "#C05A31",
+      "label": "OpenDocument 演示",
+      "description": "OpenDocument 演示",
+      "extensions": [
+        "odp"
+      ],
+      "names": []
+    },
+    {
+      "id": "keynote",
+      "category": "其他办公文档",
+      "color": "#C05A31",
+      "label": "Keynote",
+      "description": "Keynote",
+      "extensions": [
+        "key"
+      ],
+      "names": []
+    },
+    {
+      "id": "image",
+      "category": "图片",
+      "color": "#8D4FB3",
+      "label": "图片",
+      "description": "图片",
+      "extensions": [
+        "jpg",
+        "jpeg",
+        "jpe",
+        "jfif",
+        "png",
+        "gif",
+        "webp",
+        "avif",
+        "bmp",
+        "ico",
+        "icns",
+        "tif",
+        "tiff",
+        "heic",
+        "heif",
+        "svg",
+        "raw",
+        "dng",
+        "cr2",
+        "cr3",
+        "nef",
+        "arw"
+      ],
+      "names": []
+    },
+    {
+      "id": "audio",
+      "category": "音频",
+      "color": "#B14579",
+      "label": "音频",
+      "description": "音频",
+      "extensions": [
+        "mp3",
+        "wav",
+        "flac",
+        "aac",
+        "m4a",
+        "ogg",
+        "wma",
+        "aiff",
+        "aif",
+        "opus",
+        "mid",
+        "midi",
+        "amr",
+        "ape",
+        "alac"
+      ],
+      "names": []
+    },
+    {
+      "id": "video",
+      "category": "视频",
+      "color": "#6C54AE",
+      "label": "视频",
+      "description": "视频",
+      "extensions": [
+        "mp4",
+        "mov",
+        "mkv",
+        "avi",
+        "webm",
+        "wmv",
+        "flv",
+        "m4v",
+        "mpeg",
+        "mpg",
+        "m2ts",
+        "mts",
+        "m2v",
+        "3gp",
+        "vob",
+        "ogv"
+      ],
+      "names": []
+    },
+    {
+      "id": "subtitle",
+      "category": "字幕与播放列表",
+      "color": "#77599C",
+      "label": "字幕",
+      "description": "字幕",
+      "extensions": [
+        "srt",
+        "ass",
+        "ssa",
+        "vtt",
+        "lrc",
+        "sub"
+      ],
+      "names": []
+    },
+    {
+      "id": "playlist",
+      "category": "字幕与播放列表",
+      "color": "#77599C",
+      "label": "播放列表",
+      "description": "播放列表",
+      "extensions": [
+        "m3u",
+        "m3u8",
+        "pls"
+      ],
+      "names": []
+    },
+    {
+      "id": "photoshop",
+      "category": "设计源文件",
+      "color": "#476E9F",
+      "label": "Photoshop",
+      "description": "Photoshop",
+      "extensions": [
+        "psd",
+        "psb"
+      ],
+      "names": []
+    },
+    {
+      "id": "illustrator",
+      "category": "设计源文件",
+      "color": "#AA7732",
+      "label": "Illustrator",
+      "description": "Illustrator",
+      "extensions": [
+        "ai"
+      ],
+      "names": []
+    },
+    {
+      "id": "eps",
+      "category": "设计源文件",
+      "color": "#A34383",
+      "label": "EPS 矢量",
+      "description": "EPS 矢量",
+      "extensions": [
+        "eps"
+      ],
+      "names": []
+    },
+    {
+      "id": "sketch",
+      "category": "设计源文件",
+      "color": "#B18B35",
+      "label": "Sketch",
+      "description": "Sketch",
+      "extensions": [
+        "sketch"
+      ],
+      "names": []
+    },
+    {
+      "id": "figma",
+      "category": "设计源文件",
+      "color": "#A34383",
+      "label": "Figma",
+      "description": "Figma",
+      "extensions": [
+        "fig"
+      ],
+      "names": []
+    },
+    {
+      "id": "xd",
+      "category": "设计源文件",
+      "color": "#A34383",
+      "label": "Adobe XD",
+      "description": "Adobe XD",
+      "extensions": [
+        "xd"
+      ],
+      "names": []
+    },
+    {
+      "id": "affinity-design",
+      "category": "设计源文件",
+      "color": "#805E91",
+      "label": "Affinity Designer",
+      "description": "Affinity Designer",
+      "extensions": [
+        "afdesign"
+      ],
+      "names": []
+    },
+    {
+      "id": "affinity-photo",
+      "category": "设计源文件",
+      "color": "#805E91",
+      "label": "Affinity Photo",
+      "description": "Affinity Photo",
+      "extensions": [
+        "afphoto"
+      ],
+      "names": []
+    },
+    {
+      "id": "zip",
+      "category": "压缩与归档",
+      "color": "#A37220",
+      "label": "ZIP",
+      "description": "ZIP",
+      "extensions": [
+        "zip"
+      ],
+      "names": []
+    },
+    {
+      "id": "rar",
+      "category": "压缩与归档",
+      "color": "#A37220",
+      "label": "RAR",
+      "description": "RAR",
+      "extensions": [
+        "rar"
+      ],
+      "names": []
+    },
+    {
+      "id": "7z",
+      "category": "压缩与归档",
+      "color": "#A37220",
+      "label": "7-Zip",
+      "description": "7-Zip",
+      "extensions": [
+        "7z"
+      ],
+      "names": []
+    },
+    {
+      "id": "tar",
+      "category": "压缩与归档",
+      "color": "#A37220",
+      "label": "TAR",
+      "description": "TAR",
+      "extensions": [
+        "tar",
+        "tgz"
+      ],
+      "names": []
+    },
+    {
+      "id": "compressed",
+      "category": "压缩与归档",
+      "color": "#A37220",
+      "label": "压缩文件",
+      "description": "压缩文件",
+      "extensions": [
+        "gz",
+        "bz2",
+        "xz",
+        "zst",
+        "zstd",
+        "tbz2",
+        "txz"
+      ],
+      "names": []
+    },
+    {
+      "id": "html",
+      "category": "网页与前端",
+      "color": "#367CA0",
+      "label": "HTML",
+      "description": "HTML",
+      "extensions": [
+        "html",
+        "htm"
+      ],
+      "names": []
+    },
+    {
+      "id": "css",
+      "category": "网页与前端",
+      "color": "#367CA0",
+      "label": "CSS",
+      "description": "CSS",
+      "extensions": [
+        "css"
+      ],
+      "names": []
+    },
+    {
+      "id": "scss",
+      "category": "网页与前端",
+      "color": "#A96191",
+      "label": "Sass / SCSS",
+      "description": "Sass / SCSS",
+      "extensions": [
+        "scss",
+        "sass"
+      ],
+      "names": []
+    },
+    {
+      "id": "less",
+      "category": "网页与前端",
+      "color": "#367CA0",
+      "label": "Less",
+      "description": "Less",
+      "extensions": [
+        "less"
+      ],
+      "names": []
+    },
+    {
+      "id": "js",
+      "category": "网页与前端",
+      "color": "#A1832F",
+      "label": "JavaScript",
+      "description": "JavaScript",
+      "extensions": [
+        "js",
+        "mjs",
+        "cjs"
+      ],
+      "names": []
+    },
+    {
+      "id": "ts",
+      "category": "网页与前端",
+      "color": "#3265BE",
+      "label": "TypeScript",
+      "description": "TypeScript",
+      "extensions": [
+        "ts",
+        "cts"
+      ],
+      "names": []
+    },
+    {
+      "id": "react",
+      "category": "网页与前端",
+      "color": "#367CA0",
+      "label": "React",
+      "description": "React",
+      "extensions": [
+        "jsx",
+        "tsx"
+      ],
+      "names": []
+    },
+    {
+      "id": "vue",
+      "category": "网页与前端",
+      "color": "#25815C",
+      "label": "Vue",
+      "description": "Vue",
+      "extensions": [
+        "vue"
+      ],
+      "names": []
+    },
+    {
+      "id": "svelte",
+      "category": "网页与前端",
+      "color": "#C05A31",
+      "label": "Svelte",
+      "description": "Svelte",
+      "extensions": [
+        "svelte"
+      ],
+      "names": []
+    },
+    {
+      "id": "python",
+      "category": "编程语言",
+      "color": "#42728E",
+      "label": "Python",
+      "description": "Python",
+      "extensions": [
+        "py",
+        "pyw"
+      ],
+      "names": []
+    },
+    {
+      "id": "java",
+      "category": "编程语言",
+      "color": "#42728E",
+      "label": "Java",
+      "description": "Java",
+      "extensions": [
+        "java",
+        "class",
+        "jar"
+      ],
+      "names": []
+    },
+    {
+      "id": "c",
+      "category": "编程语言",
+      "color": "#42728E",
+      "label": "C",
+      "description": "C",
+      "extensions": [
+        "c",
+        "h"
+      ],
+      "names": []
+    },
+    {
+      "id": "cpp",
+      "category": "编程语言",
+      "color": "#42728E",
+      "label": "C++",
+      "description": "C++",
+      "extensions": [
+        "cpp",
+        "hpp",
+        "cxx",
+        "cc",
+        "hxx"
+      ],
+      "names": []
+    },
+    {
+      "id": "csharp",
+      "category": "编程语言",
+      "color": "#42728E",
+      "label": "C#",
+      "description": "C#",
+      "extensions": [
+        "cs"
+      ],
+      "names": []
+    },
+    {
+      "id": "go",
+      "category": "编程语言",
+      "color": "#42728E",
+      "label": "Go",
+      "description": "Go",
+      "extensions": [
+        "go"
+      ],
+      "names": []
+    },
+    {
+      "id": "rust",
+      "category": "编程语言",
+      "color": "#42728E",
+      "label": "Rust",
+      "description": "Rust",
+      "extensions": [
+        "rs"
+      ],
+      "names": []
+    },
+    {
+      "id": "php",
+      "category": "编程语言",
+      "color": "#42728E",
+      "label": "PHP",
+      "description": "PHP",
+      "extensions": [
+        "php"
+      ],
+      "names": []
+    },
+    {
+      "id": "ruby",
+      "category": "编程语言",
+      "color": "#42728E",
+      "label": "Ruby",
+      "description": "Ruby",
+      "extensions": [
+        "rb"
+      ],
+      "names": []
+    },
+    {
+      "id": "swift",
+      "category": "编程语言",
+      "color": "#42728E",
+      "label": "Swift",
+      "description": "Swift",
+      "extensions": [
+        "swift"
+      ],
+      "names": []
+    },
+    {
+      "id": "kotlin",
+      "category": "编程语言",
+      "color": "#42728E",
+      "label": "Kotlin",
+      "description": "Kotlin",
+      "extensions": [
+        "kt",
+        "kts"
+      ],
+      "names": []
+    },
+    {
+      "id": "dart",
+      "category": "编程语言",
+      "color": "#42728E",
+      "label": "Dart",
+      "description": "Dart",
+      "extensions": [
+        "dart"
+      ],
+      "names": []
+    },
+    {
+      "id": "lua",
+      "category": "编程语言",
+      "color": "#42728E",
+      "label": "Lua",
+      "description": "Lua",
+      "extensions": [
+        "lua"
+      ],
+      "names": []
+    },
+    {
+      "id": "r",
+      "category": "编程语言",
+      "color": "#42728E",
+      "label": "R",
+      "description": "R",
+      "extensions": [
+        "r"
+      ],
+      "names": []
+    },
+    {
+      "id": "shell",
+      "category": "脚本",
+      "color": "#4C775B",
+      "label": "命令脚本",
+      "description": "命令脚本",
+      "extensions": [
+        "sh",
+        "bash",
+        "zsh",
+        "bat",
+        "cmd"
+      ],
+      "names": []
+    },
+    {
+      "id": "powershell",
+      "category": "脚本",
+      "color": "#3265BE",
+      "label": "PowerShell",
+      "description": "PowerShell",
+      "extensions": [
+        "ps1",
+        "psm1"
+      ],
+      "names": []
+    },
+    {
+      "id": "json",
+      "category": "数据与配置",
+      "color": "#627183",
+      "label": "JSON",
+      "description": "JSON",
+      "extensions": [
+        "json",
+        "jsonl",
+        "ndjson"
+      ],
+      "names": []
+    },
+    {
+      "id": "xml",
+      "category": "数据与配置",
+      "color": "#627183",
+      "label": "XML",
+      "description": "XML",
+      "extensions": [
+        "xml"
+      ],
+      "names": []
+    },
+    {
+      "id": "yaml",
+      "category": "数据与配置",
+      "color": "#627183",
+      "label": "YAML",
+      "description": "YAML",
+      "extensions": [
+        "yaml",
+        "yml"
+      ],
+      "names": []
+    },
+    {
+      "id": "config",
+      "category": "数据与配置",
+      "color": "#627183",
+      "label": "配置文件",
+      "description": "配置文件",
+      "extensions": [
+        "toml",
+        "ini",
+        "conf",
+        "cfg",
+        "config",
+        "properties"
+      ],
+      "names": []
+    },
+    {
+      "id": "env",
+      "category": "数据与配置",
+      "color": "#627183",
+      "label": "环境配置",
+      "description": "环境配置",
+      "extensions": [
+        "env"
+      ],
+      "names": []
+    },
+    {
+      "id": "sql",
+      "category": "数据库",
+      "color": "#3C8590",
+      "label": "SQL",
+      "description": "SQL",
+      "extensions": [
+        "sql"
+      ],
+      "names": []
+    },
+    {
+      "id": "database",
+      "category": "数据库",
+      "color": "#3C8590",
+      "label": "数据库",
+      "description": "数据库",
+      "extensions": [
+        "db",
+        "sqlite",
+        "sqlite3",
+        "db3",
+        "mdb",
+        "accdb"
+      ],
+      "names": []
+    },
+    {
+      "id": "font",
+      "category": "字体",
+      "color": "#805E91",
+      "label": "字体",
+      "description": "字体",
+      "extensions": [
+        "ttf",
+        "otf",
+        "woff",
+        "woff2",
+        "eot"
+      ],
+      "names": []
+    },
+    {
+      "id": "executable",
+      "category": "安装与可执行文件",
+      "color": "#4C6EAD",
+      "label": "应用程序",
+      "description": "应用程序",
+      "extensions": [
+        "exe",
+        "app",
+        "appimage"
+      ],
+      "names": []
+    },
+    {
+      "id": "installer",
+      "category": "安装与可执行文件",
+      "color": "#4C6EAD",
+      "label": "安装包",
+      "description": "安装包",
+      "extensions": [
+        "msi",
+        "pkg",
+        "deb",
+        "rpm"
+      ],
+      "names": []
+    },
+    {
+      "id": "android",
+      "category": "安装与可执行文件",
+      "color": "#25815C",
+      "label": "Android 安装包",
+      "description": "Android 安装包",
+      "extensions": [
+        "apk",
+        "aab"
+      ],
+      "names": []
+    },
+    {
+      "id": "ios",
+      "category": "安装与可执行文件",
+      "color": "#67778E",
+      "label": "iOS 安装包",
+      "description": "iOS 安装包",
+      "extensions": [
+        "ipa"
+      ],
+      "names": []
+    },
+    {
+      "id": "disk",
+      "category": "系统与磁盘",
+      "color": "#67778E",
+      "label": "磁盘映像",
+      "description": "磁盘映像",
+      "extensions": [
+        "iso",
+        "img",
+        "dmg"
+      ],
+      "names": []
+    },
+    {
+      "id": "library",
+      "category": "系统与磁盘",
+      "color": "#67778E",
+      "label": "系统与库文件",
+      "description": "系统与库文件",
+      "extensions": [
+        "dll",
+        "so",
+        "dylib",
+        "sys"
+      ],
+      "names": []
+    },
+    {
+      "id": "backup",
+      "category": "系统与磁盘",
+      "color": "#67778E",
+      "label": "备份文件",
+      "description": "备份文件",
+      "extensions": [
+        "bak",
+        "backup"
+      ],
+      "names": []
+    },
+    {
+      "id": "temporary",
+      "category": "系统与磁盘",
+      "color": "#67778E",
+      "label": "临时文件",
+      "description": "临时文件",
+      "extensions": [
+        "tmp",
+        "temp"
+      ],
+      "names": []
+    },
+    {
+      "id": "model",
+      "category": "3D 与 CAD",
+      "color": "#35867D",
+      "label": "3D 模型",
+      "description": "3D 模型",
+      "extensions": [
+        "obj",
+        "fbx",
+        "stl",
+        "gltf",
+        "glb",
+        "3ds",
+        "c4d"
+      ],
+      "names": []
+    },
+    {
+      "id": "blender",
+      "category": "3D 与 CAD",
+      "color": "#C05A31",
+      "label": "Blender",
+      "description": "Blender",
+      "extensions": [
+        "blend"
+      ],
+      "names": []
+    },
+    {
+      "id": "cad",
+      "category": "3D 与 CAD",
+      "color": "#35867D",
+      "label": "CAD 图纸",
+      "description": "CAD 图纸",
+      "extensions": [
+        "dwg",
+        "dxf",
+        "step",
+        "stp"
+      ],
+      "names": []
+    },
+    {
+      "id": "torrent",
+      "category": "种子与快捷方式",
+      "color": "#437F9B",
+      "label": "BT 种子",
+      "description": "BT 种子",
+      "extensions": [
+        "torrent"
+      ],
+      "names": []
+    },
+    {
+      "id": "shortcut",
+      "category": "种子与快捷方式",
+      "color": "#437F9B",
+      "label": "快捷方式",
+      "description": "快捷方式",
+      "extensions": [
+        "lnk",
+        "url",
+        "website",
+        "webloc"
+      ],
+      "names": []
+    },
+    {
+      "id": "certificate",
+      "category": "证书与密钥",
+      "color": "#96752A",
+      "label": "证书",
+      "description": "证书",
+      "extensions": [
+        "pem",
+        "crt",
+        "cer",
+        "p7b",
+        "p7c"
+      ],
+      "names": []
+    },
+    {
+      "id": "private-key",
+      "category": "证书与密钥",
+      "color": "#96752A",
+      "label": "密钥",
+      "description": "密钥",
+      "extensions": [
+        "p12",
+        "pfx"
+      ],
+      "names": []
+    },
+    {
+      "id": "dockerfile",
+      "category": "特殊文件名",
+      "color": "#367CA0",
+      "label": "Dockerfile",
+      "description": "Dockerfile",
+      "extensions": [],
+      "names": [
+        "dockerfile"
+      ]
+    },
+    {
+      "id": "makefile",
+      "category": "特殊文件名",
+      "color": "#4C775B",
+      "label": "Makefile",
+      "description": "Makefile",
+      "extensions": [],
+      "names": [
+        "makefile"
+      ]
+    },
+    {
+      "id": "license",
+      "category": "特殊文件名",
+      "color": "#96752A",
+      "label": "许可证",
+      "description": "许可证",
+      "extensions": [],
+      "names": [
+        "license",
+        "licence",
+        "copying"
+      ]
+    },
+    {
+      "id": "readme",
+      "category": "特殊文件名",
+      "color": "#3265BE",
+      "label": "README",
+      "description": "README",
+      "extensions": [],
+      "names": [
+        "readme"
+      ]
+    },
+    {
+      "id": "gitignore",
+      "category": "特殊文件名",
+      "color": "#B76141",
+      "label": "Git 配置",
+      "description": "Git 配置",
+      "extensions": [],
+      "names": [
+        ".gitignore",
+        ".gitattributes",
+        ".gitmodules"
+      ]
+    }
+  ],
+  "aliases": {
+    "video-ts": "video"
+  }
+}

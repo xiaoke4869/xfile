@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MsixPackagingToolTemplate
+    xmlns="http://schemas.microsoft.com/msix/packaging/msixpackagingtool/template/2022">
+    <Settings
+        AllowTelemetry="false"
+        ApplyACLsToPackageFiles="true"
+        GenerateCommandLineFile="true"
+        AllowPromptForPassword="false">
+    </Settings>
+    <Installer
+        Path="xfile"
+        Arguments=""
+        InstallLocation="C:\Program Files\XFile\XFile">
+    </Installer>
+    <PackageInformation
+        PackageName="XFile"
+        PackageDisplayName="XFile"
+        PublisherName="CN=XFile"
+        PublisherDisplayName="XFile"
+        Version="0.0.1.0"
+        PackageDescription="本地文件浏览与批量归并">
+        <Capabilities>
+            <Capability Name="runFullTrust" />
+
+        </Capabilities>
+        <Applications>
+            <Application
+                Id="io.xfile.desktop"
+                Description="本地文件浏览与批量归并"
+                DisplayName="XFile"
+                ExecutableName="xfile"
+                EntryPoint="Windows.FullTrustApplication">
+
+            </Application>
+        </Applications>
+        <Resources>
+            <Resource Language="en-us" />
+        </Resources>
+        <Dependencies>
+            <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19041.0" />
+        </Dependencies>
+        <Properties>
+            <Framework>false</Framework>
+            <DisplayName>XFile</DisplayName>
+            <PublisherDisplayName>XFile</PublisherDisplayName>
+            <Description>本地文件浏览与批量归并</Description>
+            <Logo>Assets\AppIcon.png</Logo>
+        </Properties>
+    </PackageInformation>
+    <SaveLocation PackagePath="xfile.msix" />
+    <PackageIntegrity>
+        <CertificatePath></CertificatePath>
+    </PackageIntegrity>
+</MsixPackagingToolTemplate>

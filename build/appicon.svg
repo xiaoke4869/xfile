@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
+  <title>Xfile</title>
+  <desc>A frosted silver folder with an inset geometric X, on a continuous graphite squircle. Transparent exterior, frontal view, upper-left studio lighting.</desc>
+  <defs>
+    <path id="tile" d="M342 72H682C784 72 842 81 886 125C930 169 952 227 952 342V682C952 797 930 855 886 899C842 943 784 952 682 952H342C240 952 182 943 138 899C94 855 72 797 72 682V342C72 227 94 169 138 125C182 81 240 72 342 72Z"/>
+    <path id="folder-back" d="M226 348C226 309 246 288 282 288H408C427 288 440 295 452 309L481 340H738C776 340 798 362 798 400V674C798 714 776 736 736 736H288C247 736 226 714 226 674Z"/>
+    <path id="folder-front" d="M224 417C224 390 242 372 270 372H754C782 372 800 390 800 417V686C800 723 778 746 740 746H284C246 746 224 723 224 686Z"/>
+    <path id="monogram" d="M404 439H465L512 507L559 439H620L545 545L624 658H562L512 584L462 658H400L479 545Z"/>
+    <linearGradient id="graphite" x1="196" y1="102" x2="806" y2="950" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#424A53"/>
+      <stop offset=".38" stop-color="#2C333C"/>
+      <stop offset="1" stop-color="#171D25"/>
+    </linearGradient>
+    <radialGradient id="studio" cx="0" cy="0" r="1" gradientTransform="translate(244 146) rotate(54) scale(835 754)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#BCCCD9" stop-opacity=".11"/>
+      <stop offset=".73" stop-color="#BCCCD9" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="tile-rim" x1="177" y1="81" x2="862" y2="951" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D6E2EB" stop-opacity=".46"/>
+      <stop offset=".35" stop-color="#C3D5E5" stop-opacity=".11"/>
+      <stop offset=".72" stop-color="#080D14" stop-opacity=".4"/>
+      <stop offset="1" stop-color="#B2C5D7" stop-opacity=".15"/>
+    </linearGradient>
+    <linearGradient id="back-metal" x1="269" y1="284" x2="687" y2="711" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#C5CFD7"/>
+      <stop offset=".36" stop-color="#919FAA"/>
+      <stop offset="1" stop-color="#546674"/>
+    </linearGradient>
+    <linearGradient id="back-rim" x1="259" y1="289" x2="755" y2="588" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F1F6FA" stop-opacity=".85"/>
+      <stop offset="1" stop-color="#CDDFEC" stop-opacity=".14"/>
+    </linearGradient>
+    <linearGradient id="ice" x1="286" y1="355" x2="760" y2="382" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#A3C8DD"/>
+      <stop offset=".52" stop-color="#C4E7F6"/>
+      <stop offset="1" stop-color="#85ACC5"/>
+    </linearGradient>
+    <linearGradient id="frosted-silver" x1="304" y1="375" x2="707" y2="768" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D9E1E6"/>
+      <stop offset=".36" stop-color="#BCC9D2"/>
+      <stop offset=".75" stop-color="#A5B5C1"/>
+      <stop offset="1" stop-color="#879BAA"/>
+    </linearGradient>
+    <radialGradient id="glass-light" cx="0" cy="0" r="1" gradientTransform="translate(282 393) rotate(35) scale(510 409)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="front-rim" x1="299" y1="376" x2="690" y2="747" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7FCFF" stop-opacity=".87"/>
+      <stop offset=".45" stop-color="#E1EDF5" stop-opacity=".35"/>
+      <stop offset="1" stop-color="#D1E3EE" stop-opacity=".2"/>
+    </linearGradient>
+    <linearGradient id="inset" x1="447" y1="441" x2="577" y2="658" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#263440"/>
+      <stop offset=".58" stop-color="#354754"/>
+      <stop offset="1" stop-color="#435C6C"/>
+    </linearGradient>
+    <filter id="folder-shadow" x="158" y="250" width="712" height="603" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="22" stdDeviation="20" flood-color="#060D15" flood-opacity=".32"/>
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#0A121B" flood-opacity=".22"/>
+    </filter>
+    <filter id="front-shadow" x="200" y="348" width="624" height="436" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#273E50" flood-opacity=".24"/>
+    </filter>
+    <filter id="engraved" x="394" y="433" width="236" height="235" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feOffset in="SourceAlpha" dy="2" result="offset"/>
+      <feGaussianBlur in="offset" stdDeviation="1.4" result="soft-offset"/>
+      <feComposite in="soft-offset" in2="SourceAlpha" operator="out" result="lower-edge"/>
+      <feFlood flood-color="#F2FBFF" flood-opacity=".65"/>
+      <feComposite in2="lower-edge" operator="in" result="edge-light"/>
+      <feMerge><feMergeNode in="edge-light"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="grain" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope=".12"/></feComponentTransfer>
+      <feBlend in="SourceGraphic" mode="soft-light"/>
+    </filter>
+    <clipPath id="tile-clip"><use href="#tile"/></clipPath>
+    <clipPath id="front-clip"><use href="#folder-front"/></clipPath>
+  </defs>
+
+  <!-- The exterior stays transparent; the softly lit squircle is the icon itself. -->
+  <use href="#tile" fill="url(#graphite)"/>
+  <use href="#tile" fill="url(#studio)"/>
+  <g clip-path="url(#tile-clip)">
+    <use href="#tile" fill="none" stroke="url(#tile-rim)" stroke-width="5"/>
+    <path d="M342 80H682C781 80 837 89 880 131" stroke="#EDF5FC" stroke-opacity=".12" stroke-width="2" stroke-linecap="round"/>
+  </g>
+
+  <!-- A metal folder tab and one restrained ice-blue glass edge. -->
+  <g filter="url(#folder-shadow)">
+    <use href="#folder-back" fill="url(#back-metal)"/>
+    <use href="#folder-back" stroke="url(#back-rim)" stroke-width="3"/>
+    <path d="M256 366C256 360 261 355 268 355H751C759 355 765 361 765 369V389H256Z" fill="url(#ice)"/>
+    <path d="M270 356.5H749" stroke="#DDF4FF" stroke-opacity=".65" stroke-width="2" stroke-linecap="round"/>
+    <g filter="url(#front-shadow)">
+      <use href="#folder-front" fill="url(#frosted-silver)"/>
+      <use href="#folder-front" fill="url(#glass-light)"/>
+      <g clip-path="url(#front-clip)" opacity=".19">
+        <use href="#folder-front" fill="#B7C6D0" filter="url(#grain)"/>
+      </g>
+      <use href="#folder-front" stroke="url(#front-rim)" stroke-width="3"/>
+      <path d="M251 397C257 390 264 388 277 388H747" stroke="#F5FBFF" stroke-opacity=".19" stroke-width="2" stroke-linecap="round"/>
+      <path d="M247 690C247 712 260 726 285 726H739C756 726 767 721 774 711" stroke="#516D81" stroke-opacity=".15" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <!-- A single geometric mark, engraved rather than typeset. -->
+    <use href="#monogram" fill="url(#inset)" filter="url(#engraved)"/>
+    <path d="M406 440H464L512 509L560 440H618" stroke="#172632" stroke-opacity=".32" stroke-width="2" stroke-linejoin="round"/>
+  </g>
+</svg>

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+ <meta charset="UTF-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+ <meta name="color-scheme" content="light dark" />
+ <title>XFile · 文件图标</title>
+ <style>
+  :root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;color:#293444;background:#fafbfD;--surface:#fff;--line:#e5e9ee;--muted:#748093;--icon-size:32px;color-scheme:light}
+  *{box-sizing:border-box}body{margin:0}main{max-width:1240px;margin:auto;padding:44px 48px 80px}.masthead{display:flex;align-items:center;gap:12px;font-size:11px;letter-spacing:2px;color:var(--muted)}.masthead b{color:#356ad8}.masthead span{border-left:1px solid var(--line);padding-left:12px}header{margin:38px 0 28px}h1{font-size:36px;font-weight:650;letter-spacing:-1px;margin:0 0 12px}header p{font-size:13px;line-height:1.8;color:var(--muted);margin:0}.controls{display:flex;gap:12px;align-items:end;flex-wrap:wrap;padding:20px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);position:sticky;top:0;background:inherit;z-index:1;backdrop-filter:blur(16px)}label{display:grid;gap:6px;font-size:11px;color:var(--muted)}input,select,button{font:inherit;color:inherit;border:1px solid var(--line);background:var(--surface);border-radius:6px;min-height:36px;padding:7px 10px}input{width:240px}button{cursor:pointer}button:hover{border-color:#8fa6ca}input:focus-visible,select:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid #356ad8;outline-offset:3px}.results{margin-left:auto;font-size:12px;color:var(--muted);padding-bottom:10px}section{margin-top:32px}h2{font-size:13px;margin:0 0 13px;font-weight:600}h2 span{font-size:10px;color:var(--muted);margin-left:8px;font-weight:400}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));border-left:1px solid var(--line);border-top:1px solid var(--line)}.icon{display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;min-height:136px;background:var(--surface);border-right:1px solid var(--line);border-bottom:1px solid var(--line);color:inherit;text-decoration:none;padding:18px 8px 14px}.icon:hover{background:#edf3ff}.icon img{width:var(--icon-size);height:var(--icon-size);object-fit:contain}.icon small{font-size:10px;line-height:1.5;color:var(--muted);max-width:100%;text-align:center;overflow-wrap:anywhere}.icon-formats{font-size:9px;line-height:1.4;min-height:13px;color:var(--muted);text-align:center;overflow-wrap:anywhere}.empty{padding:60px 0;color:var(--muted);text-align:center}footer{font-size:11px;color:var(--muted);margin-top:32px;line-height:1.8}
+  [data-theme=dark]{color-scheme:dark;--surface:#202733;--line:#343e4c;--muted:#a8b4c7;color:#e5ebf3;background:#171d26}[data-theme=dark] .icon:hover{background:#2a3548}
+  @media(max-width:640px){main{padding:28px 20px 48px}h1{font-size:28px}.controls{position:static}input{width:min(240px,calc(100vw - 40px))}.results{width:100%;margin:0;padding:0}.grid{grid-template-columns:repeat(auto-fill,minmax(85px,1fr))}}
+ </style>
+</head>
+<body>
+ <main>
+  <div class="masthead"><b>XFILE</b><span>FILE ICON COLLECTION</span></div>
+  <header><h1>每种文件，都有自己的标识。</h1><p>浅色文件轮廓 · 简洁类型符号 · 同类格式复用<br>24 × 24 矢量网格，点击图标可下载 SVG。图标下方列出支持的格式。</p></header>
+  <div class="controls">
+   <label>查找格式<input id="search" type="search" placeholder="搜索 PDF、图片、未知格式…" /></label>
+   <label>分类<select id="category"><option value="">全部分类</option></select></label>
+   <label>显示尺寸<select id="size"><option value="24">24 px</option><option value="32" selected>32 px</option><option value="48">48 px</option></select></label>
+   <button id="theme" type="button" aria-pressed="false">深色背景</button>
+   <span id="count" class="results" role="status" aria-live="polite"></span>
+  </div>
+  <div id="catalog"></div>
+  <footer>视频、音频、图片各共用一个图标；Word、Excel、PowerPoint 与 PDF 分别使用独立图标。<br>TS 默认展示 TypeScript，KEY 默认展示 Keynote；未知格式、无扩展名和普通文件均有默认图标。</footer>
+ </main>
+ <script type="module" src="/src/file-icons-gallery.ts"></script>
+</body>
+</html>

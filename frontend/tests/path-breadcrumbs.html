@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>底部路径栏检查</title></head>
+<body><div id="app"></div>
+<!-- Run npm run dev, then open /tests/path-breadcrumbs.html. -->
+<script type="module">
+import { setTransport } from '@wailsio/runtime'
+import { nextTick } from 'vue'
+window.webkit={messageHandlers:{external:{postMessage(){}}}}
+const initial='/Users/mico/Library/pnpm/store',calls=[]
+let copied=''
+const entries=Array.from({length:122},(_,i)=>({name:'目录'+i,path:initial+'/目录'+i,dir:true,link:false,size:0,modified:0}))
+setTransport({async call(object,method,windowName,request){
+ if(object===1){copied=request.text;return}
+ if(object!==0)return
+ const name=request.methodName.split('.').pop()
+ if(name==='Home')return {home:initial,locations:[]}
+ if(name==='Tasks')return []
+ if(name==='List'){calls.push(request.args[0]);return entries}
+ throw new Error('意外接口：'+name)
+}})
+await import('../src/main.ts')
+const state=document.querySelector('#app').__vue_app__._instance.setupState
+const assert=(value,message)=>{if(!value)throw new Error(message)}
+const flush=async()=>{for(let i=0;i<20;i++)await nextTick()}
+const buttons=()=>[...document.querySelectorAll('.breadcrumb-button')]
+const copy=()=>document.querySelector('[aria-label="复制当前路径"]')
+try{
+ await flush()
+ assert(buttons().map(b=>b.textContent).join(',')==='磁盘根目录,Users,mico,Library,pnpm,store','路径层级不正确')
+ assert(document.querySelectorAll('.breadcrumb-separator').length===5&&document.querySelectorAll('.path-breadcrumbs .file-icon').length===5,'缺少文件夹图标或分隔符')
+ assert(document.querySelector('.status-count').textContent==='122 个项目','项目数量丢失')
+ copy().click();await flush();assert(copied===initial&&calls.length===1,'复制路径触发了导航或复制内容错误')
+ buttons().find(b=>b.textContent==='Library').click();await flush()
+ assert(state.path==='/Users/mico/Library'&&buttons().at(-1).textContent==='Library'&&copied===initial,'单击目录未导航或仍执行复制')
+ document.querySelector('[aria-label="后退"]').click();await flush()
+ assert(state.path===initial,'面包屑导航未写入历史')
+ state.selected=[entries[0]];await flush()
+ assert(buttons().at(-1).textContent===entries[0].name&&!buttons().at(-1).disabled,'选中文件夹路径未展示')
+ copy().click();await flush();assert(copied===entries[0].path,'复制未保留原选中项目路径语义')
+ state.selected=[{...entries[0],name:'file.txt',path:initial+'/file.txt',dir:false}];await flush()
+ assert(buttons().at(-1).disabled&&buttons().at(-2).textContent==='store','文件末尾仍可进入或父目录丢失')
+ state.selected=[];state.path='/Users/mico/'+Array.from({length:15},(_,i)=>'很长的文件夹名称'+i).join('/');await flush()
+ const bar=document.querySelector('.path-breadcrumbs')
+ assert(bar.scrollWidth>bar.clientWidth&&bar.scrollLeft>0,'长路径未滚动至当前目录')
+ const bounds=copy().getBoundingClientRect()
+ assert(bounds.right<=innerWidth&&bounds.left>=0,'长路径挤出复制按钮')
+ state.path='';await flush()
+ assert(copy().disabled&&document.querySelector('.path-breadcrumbs').textContent==='尚未选择目录','空路径状态错误')
+ state.path=initial;await flush()
+ window.pathBreadcrumbsResult={passed:true}
+ document.title='PASS · 底部路径栏检查'
+}catch(error){window.pathBreadcrumbsResult={passed:false,error:String(error)};document.title='FAIL · '+error.message;console.error(error)}
+</script></body></html>

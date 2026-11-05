@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-label="React">
+  <title>React</title>
+  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#367CA0" fill-opacity=".035" stroke="#7CAAC1" stroke-width=".9" stroke-linejoin="round"/>
+  <path d="M14 2v4.5A1.5 1.5 0 0 0 15.5 8H20" stroke="#7CAAC1" stroke-width=".9" stroke-linejoin="round"/>
+  <g transform="translate(3 4.5) scale(.75)" color="#4A89AA" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="12" rx="7" ry="2.5"/><ellipse cx="12" cy="12" rx="7" ry="2.5" transform="rotate(60 12 12)"/><ellipse cx="12" cy="12" rx="7" ry="2.5" transform="rotate(120 12 12)"/><circle cx="12" cy="12" r=".8" fill="currentColor" stroke="none"/></g>
+</svg>

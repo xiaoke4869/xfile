@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-label="SQL">
+  <title>SQL</title>
+  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#3C8590" fill-opacity=".035" stroke="#80B0B7" stroke-width=".9" stroke-linejoin="round"/>
+  <path d="M14 2v4.5A1.5 1.5 0 0 0 15.5 8H20" stroke="#80B0B7" stroke-width=".9" stroke-linejoin="round"/>
+  <g transform="translate(3 4.5) scale(.75)" color="#50919B" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="7.5" rx="5" ry="2"/><path d="M7 7.5v9c0 2.7 10 2.7 10 0v-9M7 12c0 2.7 10 2.7 10 0"/></g>
+</svg>

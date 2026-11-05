@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>右键菜单与日志删除检查</title></head>
+<body>
+<div id="app"></div>
+<!-- Run npm run dev, then open /tests/context-history.html. -->
+<script type="module">
+import '../src/main.ts'
+import { nextTick } from 'vue'
+
+const state=document.querySelector('#app').__vue_app__._instance.setupState
+const assert=(condition,message)=>{if(!condition)throw new Error(message)}
+const flush=async()=>{await nextTick();await nextTick();await nextTick()}
+const context=async selector=>{document.querySelector(selector).dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:300,clientY:200}));await flush()}
+const action=label=>[...document.querySelectorAll('.file-context-menu button')].find(button=>button.textContent===label)
+const cancel=async()=>{[...document.querySelectorAll('dialog[open] button')].find(button=>button.textContent==='取消').click();await new Promise(requestAnimationFrame);await flush()}
+try{
+ state.path='/context-check'
+ state.entries=[{path:'/context-check/file.txt',name:'file.txt',dir:false,link:false,size:1,modified:0}]
+ await flush()
+ await context('tbody tr')
+ assert(action('复制')&&!action('复制').disabled,'文件行复制不可用')
+ action('复制').click();await flush()
+ await context('.file-panel')
+ assert(state.selected.length===0,'空白处右键保留了文件选择')
+ for(const label of ['新建文件夹','查看简介'])assert(action(label)&&!action(label).disabled,'当前目录菜单缺少可用操作：'+label)
+ for(const label of ['复制','移动','粘贴'])assert(action(label)?.disabled,'空白处操作未置灰：'+label)
+ action('新建文件夹').click();await flush()
+ assert(document.querySelector('[aria-label="文件夹名称"]').closest('dialog').open,'右键新建未打开弹窗')
+ await cancel()
+ state.entries=[];await flush();await context('.file-panel')
+ assert(action('查看简介')&&!action('查看简介').disabled,'空目录无法查看简介')
+ document.querySelector('.file-panel').focus()
+ document.querySelector('.file-panel').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}))
+ await flush()
+ state.tasks=[{id:'one',operation:'copy',status:'succeeded',total:1,moved:1},{id:'two',operation:'move',status:'succeeded',total:1,moved:1}]
+ state.view='tasks';await flush()
+ const clear=()=>[...document.querySelectorAll('.tasks-heading button')].find(button=>button.textContent==='清空全部记录')
+ assert(!clear().disabled&&document.querySelectorAll('.delete-log').length===2,'日志删除入口缺失')
+ clear().click();await flush()
+ assert(document.querySelector('#log-delete-title').textContent==='清空全部记录？','清空缺少确认')
+ await cancel()
+ assert(state.tasks.length===2,'取消清空仍改变记录')
+ document.querySelector('.delete-log').click();await flush()
+ assert(state.pendingLogDelete==='one'&&document.querySelector('#log-delete-title').textContent==='删除这条记录？','单条删除目标不正确')
+ await cancel()
+ state.busy=true;await flush()
+ assert(clear().disabled&&[...document.querySelectorAll('.delete-log')].every(button=>button.disabled),'运行期间仍允许删除记录')
+ state.busy=false;state.tasks=[];await flush()
+ assert(clear().disabled,'空历史仍可清空')
+ window.contextHistoryResult={passed:true}
+ document.title='PASS · 右键菜单与日志删除检查'
+}catch(error){
+ window.contextHistoryResult={passed:false,error:String(error)}
+ document.title='FAIL · '+error.message
+ console.error(error)
+}
+</script>
+</body>
+</html>

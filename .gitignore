@@ -1,0 +1,46 @@
+# 本地文档
+/docs/
+
+# 本地工具链和缓存
+.tools/
+.cache/
+.task/
+.playwright-mcp/
+
+# Go
+*.test
+*.out
+coverage.out
+coverage.html
+*.prof
+*.syso
+
+# 前端依赖、构建产物和 Wails 自动生成绑定
+frontend/node_modules/
+frontend/dist/
+frontend/bindings/
+
+# 本地图标方案草稿
+frontend/public/icon-proposals/
+
+# Wails / 平台构建产物
+bin/
+build/bin/
+release/
+build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
+
+# 日志和临时文件
+*.log
+*.tmp
+*.swp
+
+# 操作系统和编辑器文件
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# 本地环境变量
+.env
+.env.*
+!.env.example

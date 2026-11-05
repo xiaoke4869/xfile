@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>最近目录与标题栏避让检查</title></head>
+<body><div id="app"></div>
+<!-- Run npm run dev, then open /tests/recent-directories.html. Uses an in-memory desktop API. -->
+<script type="module">
+import { setTransport } from '@wailsio/runtime'
+import { nextTick } from 'vue'
+window.webkit={messageHandlers:{external:{postMessage(){}}}}
+Object.defineProperty(navigator,'platform',{value:'MacIntel',configurable:true})
+const storageKey='xfile.recentDirectories',saved=localStorage.getItem(storageKey)
+localStorage.setItem(storageKey,JSON.stringify(['/old','/old','',null,...Array.from({length:52},(_,i)=>'/saved/'+i)]))
+setTransport({async call(object,method,windowName,request){
+ if(object!==0)return
+ const name=request.methodName.split('.').pop(),path=request.args[0]
+ if(name==='Home')return {home:'/home',locations:[]}
+ if(name==='Tasks')return []
+ if(name==='List'){if(path==='/missing')throw new Error('目录不存在');return []}
+ throw new Error('意外的接口：'+name)
+}})
+await import('../src/main.ts')
+const state=document.querySelector('#app').__vue_app__._instance.setupState
+const assert=(value,message)=>{if(!value)throw new Error(message)}
+const flush=async()=>{for(let i=0;i<20;i++)await nextTick()}
+const trigger=()=>document.querySelector('[aria-label="最近访问目录"]')
+const panel=()=>document.querySelector('.recent-panel')
+const stored=()=>JSON.parse(localStorage.getItem(storageKey))
+const open=async()=>{trigger().click();await flush()}
+try{
+ await flush()
+ assert(document.documentElement.classList.contains('native-mac'),'运行时系统环境未就绪时没有检测 macOS')
+ assert(document.querySelector('.sidebar-section').getBoundingClientRect().top>=68,'工作空间没有避开红绿灯区域')
+ assert(trigger().parentElement.previousElementSibling.getAttribute('aria-label')==='复制当前路径','最近目录按钮没有位于复制右侧')
+ await open()
+ assert(panel().querySelectorAll('li').length===50&&stored()[0]==='/home','加载历史未过滤或限制 50 个')
+ for(let i=0;i<55;i++)await state.navigate('/directories/目录 '+i)
+ await flush()
+ assert(stored().length===50&&stored()[0]==='/directories/目录 54'&&stored().at(-1)==='/directories/目录 5','最近 50 个记录截断或顺序不正确')
+ await state.navigate('/directories/目录 10');await flush()
+ assert(stored()[0]==='/directories/目录 10'&&stored().filter(p=>p==='/directories/目录 10').length===1,'再次进入未去重并置顶')
+ const before=JSON.stringify(stored())
+ await state.refreshFiles();await state.navigate('/missing');await flush()
+ assert(JSON.stringify(stored())===before,'刷新或失败导航改变最近记录')
+ const box=panel().getBoundingClientRect(),control=trigger().getBoundingClientRect(),list=panel().querySelector('ul')
+ assert(box.bottom<control.top&&box.right<=innerWidth&&box.left>=0&&box.top>=0,'历史面板没有向上弹出或超出窗口')
+ assert(list.scrollHeight>list.clientHeight&&getComputedStyle(list).overflowY==='auto','历史列表不能滚动')
+ list.scrollTop=list.scrollHeight;assert(list.scrollTop>0,'历史列表无法滚动到底部')
+ const target=stored()[4]
+ document.querySelector(`[aria-label="进入最近目录 ${target}"]`).click();await flush()
+ assert(state.path===target&&!panel()&&stored()[0]===target,'点击最近目录没有进入或置顶')
+ state.view='tasks';await flush();state.view='files';await flush();await open()
+ assert(panel().querySelectorAll('li').length===50,'重新进入文件浏览丢失持久记录')
+ document.querySelector(`[aria-label="移除最近记录 ${target}"]`).click();await flush()
+ assert(stored().length===49&&!stored().includes(target)&&panel(),'单条移除未保存或关闭面板')
+ panel().dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));await flush()
+ assert(!panel()&&document.activeElement===trigger(),'Escape 未关闭面板并恢复焦点')
+ await open();document.querySelector('.directory-title').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));await flush()
+ assert(!panel(),'点击面板外未关闭')
+ await open();[...panel().querySelectorAll('button')].find(b=>b.textContent==='清空记录').click();await flush()
+ assert(stored().length===0&&panel().textContent.includes('暂无最近访问目录'),'清空没有移除所有记录')
+ await state.refreshFiles();await flush();assert(stored().length===0,'清空后刷新重新创建了记录')
+ await state.navigate('/home');await state.navigate('/next');await flush()
+ document.querySelector('[aria-label="后退"]').click();await flush()
+ assert(stored()[0]==='/home','后退进入目录未更新最近访问顺序')
+ window.recentDirectoriesResult={passed:true}
+ document.title='PASS · 最近目录与标题栏避让检查'
+}catch(error){window.recentDirectoriesResult={passed:false,error:String(error)};document.title='FAIL · '+error.message;console.error(error)}
+finally{if(saved===null)localStorage.removeItem(storageKey);else localStorage.setItem(storageKey,saved)}
+</script></body></html>

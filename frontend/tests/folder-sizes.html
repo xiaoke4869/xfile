@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>文件夹大小列检查</title></head>
+<body>
+<div id="app"></div>
+<!-- Run npm run dev, then open /tests/folder-sizes.html. Uses an in-memory Wails transport. -->
+<script type="module">
+import { setTransport } from '@wailsio/runtime'
+import { nextTick } from 'vue'
+window.webkit={messageHandlers:{external:{postMessage(){}}}}
+const entry=(name,dir=true)=>({path:'/sizes/'+name,name,dir,size:75,modified:0,link:false})
+const initial=[entry('a'),entry('b'),entry('.hidden'),entry('file.txt',false)],nested=entry('a/nested')
+let listing=[...initial],cancelled=0
+const pending=[],calls=[]
+setTransport({async call(object,method,windowName,request){
+ if(object===10){cancelled++;return}
+ if(object!==0)return
+ const name=request.methodName.split('.').pop(),path=request.args[0]
+ if(name==='Home')return {home:'/sizes',locations:[]}
+ if(name==='List')return path==='/sizes/a'?[nested]:listing
+ if(name==='Tasks')return []
+ if(name==='CountDirectory'){
+  calls.push(path)
+  return new Promise((resolve,reject)=>pending.push({path,resolve,reject}))
+ }
+ throw new Error('意外接口：'+name)
+}})
+await import('../src/main.ts')
+const state=document.querySelector('#app').__vue_app__._instance.setupState
+const assert=(value,message)=>{if(!value)throw new Error(message)}
+const flush=async()=>{for(let i=0;i<20;i++)await nextTick()}
+const button=label=>document.querySelector(`[aria-label="${label}"]`)
+const row=name=>[...document.querySelectorAll('tbody tr')].find(row=>row.querySelector('input')?.getAttribute('aria-label')==='选择 '+name)
+const cell=name=>row(name).children[1]
+const batch=()=>button('计算当前目录全部文件夹大小')
+const finish=async(bytes)=>{assert(pending.length===1,'统计未顺序执行或重复请求');pending.shift().resolve({bytes,files:1,folders:0});await flush()}
+try{
+ await flush()
+ assert(cell('a').textContent==='计算'&&cell('b').textContent==='计算','文件夹大小仍显示横杠')
+ assert(cell('file.txt').textContent==='75 B'&&calls.length===0,'普通文件大小或按需计算回归')
+ button('计算文件夹 a 的大小').click();await flush()
+ assert(state.selected.length===0&&state.path==='/sizes'&&pending[0].path==='/sizes/a','计算按钮触发选择或导航')
+ assert(button('计算文件夹 a 的大小').disabled&&cell('a').textContent==='计算中…','单目录未展示计算状态')
+ batch().click();await flush()
+ assert(pending.length===1&&batch().disabled&&state.sortField==='name','批量重复计算正在统计的目录或触发排序')
+ await finish(1024)
+ assert(cell('a').textContent==='1.0 KB'&&pending[0].path==='/sizes/b','单目录结果未回填或批量未继续')
+ await finish(512)
+ assert(pending[0].path==='/sizes/.hidden','批量遗漏隐藏目录')
+ await finish(0)
+ assert(!batch().disabled&&cell('b').textContent==='512 B','批量计算未结束')
+ const names=()=>[...document.querySelectorAll('tbody tr input')].map(input=>input.getAttribute('aria-label').slice(3))
+ document.querySelector('th:nth-child(2) .sort-heading').click();await flush()
+ assert(names().join(',')==='b,a,file.txt','批量统计结果未参与大小升序排序')
+ document.querySelector('th:nth-child(2) .sort-heading').click();await flush()
+ assert(names().join(',')==='a,b,file.txt','批量统计结果未参与大小降序排序')
+ document.querySelector('th:first-child .sort-heading').click();await flush()
+ state.showHidden=true;await flush()
+ assert(cell('.hidden').textContent==='0 B','空目录没有显示 0 B')
+ state.search='b';await flush();assert(cell('b').textContent==='512 B','搜索丢失临时大小')
+ state.search='';await flush()
+ button('展开 a').click();await flush()
+ button('计算文件夹 a/nested 的大小').click();await flush();await finish(200)
+ assert(cell('a/nested').textContent==='200 B','展开子目录未支持大小计算')
+ button('收起 a').click();await flush();button('展开 a').click();await flush()
+ assert(cell('a/nested').textContent==='200 B','折叠展开丢失临时结果')
+ await state.refreshFiles();await flush()
+ assert(cell('a').textContent==='计算'&&Object.keys(state.directorySizes).length===0,'刷新未清空临时结果')
+ batch().click();await flush();pending.shift().reject(new Error('没有读取权限'));await flush()
+ assert(pending[0].path==='/sizes/b'&&cell('a').textContent==='计算','单目录失败阻塞批量或展示错误大小')
+ await finish(2);await finish(3)
+ assert(document.querySelector('.toast-container').textContent.includes('没有读取权限'),'错误未提示')
+ button('计算文件夹 a 的大小').click();await flush()
+ const late=pending.shift(),before=calls.length
+ await state.navigate('/other');await flush();late.resolve({bytes:999,files:1,folders:0});await flush()
+ assert(cancelled===1&&calls.length===before&&Object.keys(state.directorySizes).length===0,'切换目录未取消统计或旧结果覆盖新目录')
+ listing=Array.from({length:201},(_,i)=>entry('folder'+String(i).padStart(3,'0')))
+ listing.push(entry('.hidden'))
+ await state.navigate('/sizes');state.showHidden=false;state.search='folder000';await flush()
+ const offset=calls.length
+ batch().click();await flush()
+ for(let i=0;i<listing.length;i++)await finish(i)
+ assert(calls.length-offset===202,'批量未覆盖筛选外或其他分页的文件夹')
+ state.sortField='size';state.sortDirection='desc';state.search='';await flush()
+ assert(names()[0]==='folder200'&&names()[199]==='folder001','大小排序未在分页前执行')
+ state.page=1;await flush()
+ assert(names().join(',')==='folder000','大小排序分页结果不一致')
+ state.sortField='name';state.page=0;await flush()
+ state.search='';await flush();state.page=1;await flush()
+ assert(cell('folder200').textContent==='200 B','分页未保留计算结果')
+ listing=[entry('file.txt',false)];await state.refreshFiles();await flush()
+ assert(!batch(),'纯文件目录仍显示批量计算按钮')
+ window.folderSizesResult={passed:true,calls:calls.length,cancelled}
+ document.title='PASS · 文件夹大小列检查'
+}catch(error){
+ window.folderSizesResult={passed:false,error:String(error)}
+ document.title='FAIL · '+error.message
+ console.error(error)
+}
+</script>
+</body>
+</html>

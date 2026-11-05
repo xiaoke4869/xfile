@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-label="证书">
+  <title>证书</title>
+  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#96752A" fill-opacity=".035" stroke="#BBA575" stroke-width=".9" stroke-linejoin="round"/>
+  <path d="M14 2v4.5A1.5 1.5 0 0 0 15.5 8H20" stroke="#BBA575" stroke-width=".9" stroke-linejoin="round"/>
+  <g transform="translate(3 4.5) scale(.75)" color="#A1833F" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"><path d="m12 5.5 5.5 2v5c0 3-3 5-5.5 6-2.5-1-5.5-3-5.5-6v-5zM9 12l2 2 4-4"/></g>
+</svg>

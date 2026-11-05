@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>目录选择与跳转检查</title></head>
+<body>
+<div id="app"></div>
+<!-- Run npm run dev, then open /tests/directory-navigation.html. Uses an in-memory Wails transport. -->
+<script type="module">
+import { setTransport } from '@wailsio/runtime'
+import { nextTick } from 'vue'
+
+window.webkit={messageHandlers:{external:{postMessage(){}}}}
+const entry=(path,dir=true)=>({path,name:path.split('/').pop(),dir,link:false,size:0,modified:0})
+const directories={'/home':[entry('/home/资料 目录'),entry('/home/file.txt',false)],'/home/资料 目录':[], '/home/Library/Application Support/apifox':[], '/denied':[]}
+const calls=[]
+setTransport({async call(object,method,windowName,request){
+ if(object!==0)return
+ const name=request.methodName.split('.').pop(),target=request.args[0];calls.push({name,target})
+ if(name==='Home')return {home:'/home',locations:[{name:'主目录',path:'/home'}]}
+ if(name==='Tasks')return []
+ if(name==='EntryInfo'){
+  const normalized=target.replace(/^~(?=\/|$)/,'/home').replace(/\/$/,'')
+  if(normalized==='/home/file.txt')return entry(normalized,false)
+  if(normalized in directories)return entry(normalized)
+  throw new Error('目录不存在')
+ }
+ if(name==='List'){
+  if(target==='/denied')throw new Error('没有读取权限')
+  if(target in directories)return directories[target]
+  throw new Error('目录不存在')
+ }
+ throw new Error('不应调用 '+name)
+}})
+await import('../src/main.ts')
+const state=document.querySelector('#app').__vue_app__._instance.setupState
+const assert=(condition,message)=>{if(!condition)throw new Error(message)}
+const flush=async()=>{for(let i=0;i<12;i++)await nextTick()}
+const button=(scope,text)=>[...scope.querySelectorAll('button')].find(b=>b.textContent.trim()===text)
+const menu=async name=>{button(document.querySelector('.browser-toolbar .toolbar-menus'),name).click();await flush()}
+const openJump=async()=>{await menu('操作');button(document.querySelector('[role=menu]'),'跳转目录').click();await flush()}
+const submit=async value=>{const input=document.querySelector('[aria-label="跳转目录路径"]');input.value=value;input.dispatchEvent(new Event('input',{bubbles:true}));input.form.requestSubmit();await flush()}
+try{
+ await flush()
+ assert(state.path==='/home','初始目录未加载')
+ assert([...document.querySelectorAll('.browser-toolbar .menu-trigger')].map(b=>b.textContent).join(',')==='文件,功能,操作,查看','菜单名称错误')
+ await menu('功能')
+ for(const label of ['归并目录','递归提取文件','查看目录结构'])assert(button(document.querySelector('[role=menu]'),label),'功能菜单缺少 '+label)
+ document.querySelector('[aria-label="打开目录"]').click();await flush()
+ let picker=document.querySelector('.directory-picker[open]')
+ assert(picker?.querySelector('h2').textContent==='打开目录','未使用项目目录选择器')
+ assert(picker.querySelector('[aria-label="目标选择路径"]').value==='/home','未从当前目录开始')
+ assert(!picker.textContent.includes('个项目')&&!picker.textContent.includes('来源目录'),'打开目录误用移动限制')
+ picker.querySelector('[aria-label="选择目录 资料 目录"]').click();await flush()
+ button(picker,'打开此目录').click();await flush()
+ assert(state.path==='/home/资料 目录'&&!picker.open,'选择目录未跳转')
+ document.querySelector('[aria-label="打开目录"]').click();await flush()
+ picker=document.querySelector('.directory-picker[open]');button(picker,'取消').click();await flush()
+ assert(state.path==='/home/资料 目录','取消选择改变了目录')
+ await openJump()
+ const dialog=document.querySelector('[aria-labelledby="jump-title"]'),input=document.querySelector('[aria-label="跳转目录路径"]')
+ assert(document.activeElement===input&&input.value===state.path&&input.selectionEnd===input.value.length,'跳转输入未聚焦并选中当前路径')
+ await submit('   ')
+ assert(button(dialog,'跳转').disabled,'空白路径仍可提交')
+ for(const [target,error] of [['/missing','目录不存在'],['/home/file.txt','不能跳转到文件'],['/denied','没有读取权限']]){
+  await submit(target)
+  assert(dialog.open&&dialog.querySelector('[role=alert]').textContent.includes(error),'错误未在弹窗展示：'+target)
+  assert(state.path==='/home/资料 目录','失败跳转改变当前目录')
+ }
+ await submit(' /home/ ')
+ assert(!dialog.open&&state.path==='/home'&&!state.search&&state.selected.length===0,'跳转成功未更新列表或关闭弹窗')
+ document.querySelector('[aria-label="后退"]').click();await flush()
+ assert(state.path==='/home/资料 目录','跳转未加入历史')
+ document.querySelector('[aria-label="前进"]').click();await flush()
+ assert(state.path==='/home','前进历史失效')
+ await openJump();button(dialog,'取消').click();await flush()
+ assert(!dialog.open&&state.path==='/home','取消跳转改变当前目录')
+ await openJump();await submit('~/Library/Application Support/apifox')
+ assert(!dialog.open&&state.path==='/home/Library/Application Support/apifox','主目录缩写跳转未使用绝对路径')
+ await openJump();await submit('~')
+ assert(!dialog.open&&state.path==='/home','单独的 ~ 无法跳转主目录')
+ document.querySelector('[aria-label="打开目录"]').click();await flush()
+ picker=document.querySelector('.directory-picker[open]')
+ const pickerInput=picker.querySelector('[aria-label="目标选择路径"]')
+ pickerInput.value='~/Library/Application Support/apifox';pickerInput.dispatchEvent(new Event('input',{bubbles:true}));pickerInput.form.requestSubmit();await flush()
+ assert(pickerInput.value==='/home/Library/Application Support/apifox'&&!button(picker,'打开此目录').disabled,'目录选择器未规范化主目录缩写')
+ button(picker,'打开此目录').click();await flush()
+ assert(state.path==='/home/Library/Application Support/apifox','目录选择器确认后路径错误')
+ assert(!calls.some(c=>c.name==='ChooseDirectory'),'打开目录仍调用原生选择器')
+ window.directoryNavigationResult={passed:true,calls:calls.length}
+ document.title='PASS · 目录选择与跳转检查'
+}catch(error){
+ window.directoryNavigationResult={passed:false,error:String(error)}
+ document.title='FAIL · '+error.message
+ console.error(error)
+}
+</script>
+</body>
+</html>
