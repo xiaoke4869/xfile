@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vScrollbars } from '../scrollbars'
 import { computed,nextTick,onUnmounted,ref,useId } from 'vue'
 import { ArrowLeft,ArrowRight,ArrowUp,Close,FolderOpened,House,Loading,Monitor,Warning } from '@element-plus/icons-vue'
 import FileIcon from './FileIcon.vue'
@@ -64,15 +65,15 @@ onUnmounted(invalidate)
    <form class="path-field" @submit.prevent="navigate(pathInput.trim())"><FolderOpened/><input v-model="pathInput" autofocus aria-label="目标选择路径" placeholder="输入目录路径"/><button type="submit" class="icon-button" aria-label="打开输入的目录"><ArrowRight/></button></form>
   </div>
   <div class="picker-body">
-   <nav class="picker-locations" aria-label="目录选择常用位置">
+   <nav v-scrollbars class="picker-locations" aria-label="目录选择常用位置">
     <button type="button" :class="{active:key(current)===key(filesystemRoot)}" :disabled="loading" @click="navigate(filesystemRoot)"><Monitor/><span>{{filesystemRoot==='/'?'磁盘根目录':filesystemRoot}}</span></button>
     <button v-for="loc in locations" :key="loc.path" type="button" :title="loc.path" :class="{active:key(current)===key(loc.path)}" :disabled="loading" @click="navigate(loc.path)"><House/><span>{{loc.name}}</span></button>
    </nav>
    <section class="picker-content" :aria-busy="loading" aria-label="可选目录">
     <div class="picker-list-heading"><span>{{current?base(current):'目录'}}</span><label class="inline-check"><input v-model="showHidden" type="checkbox"/>显示隐藏目录</label></div>
-    <div v-if="error" class="picker-error" role="alert"><Warning/><span>{{error}}</span></div>
+    <div v-scrollbars v-if="error" class="picker-error" role="alert"><Warning/><span>{{error}}</span></div>
     <div v-if="loading" class="picker-empty"><Loading class="spin"/>正在读取目录…</div>
-    <ul v-else class="picker-folders">
+    <ul v-scrollbars v-else class="picker-folders">
      <li v-for="folder in folders" :key="folder.path" :class="{selected:selected===folder.path,blocked:withinSource(folder.path)}">
       <button type="button" class="picker-folder-choice" :disabled="withinSource(folder.path)||!!error" :aria-pressed="selected===folder.path" :aria-label="`选择目录 ${folder.name}`" :title="folder.path" @click="selected=folder.path" @dblclick="navigate(folder.path)" @keydown.enter.prevent="navigate(folder.path)"><FileIcon :name="folder.name" dir/><span>{{folder.name}}</span><small v-if="withinSource(folder.path)">来源目录</small></button>
       <button type="button" class="icon-button" :aria-label="`进入目录 ${folder.name}`" :disabled="withinSource(folder.path)||!!error" @click="navigate(folder.path)"><ArrowRight/></button>

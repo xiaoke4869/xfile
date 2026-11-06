@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>任务中心与目录计算检查</title></head>
+<body><div id="app"></div>
+<!-- Run npm run dev, then open /tests/task-center.html. No real filesystem operations. -->
+<script type="module">
+import { setTransport } from '@wailsio/runtime'
+import { nextTick } from 'vue'
+window.webkit={messageHandlers:{external:{postMessage(){}}}}
+const entry=(name,dir=true,link=false)=>({path:'/center/'+name,name:name.split('/').pop(),dir,link,size:19,modified:0})
+const root=[entry('a'),entry('b'),entry('.hidden'),entry('link',true,true),entry('file.txt',false)]
+const lists={'/center/a/nested/deep/leaf':[entry('a/nested/deep/leaf/twig')],'/center':root,'/center/a':[entry('a/nested'),entry('a/file.txt',false)],'/center/a/nested':[entry('a/nested/deep')],'/center/a/nested/deep':[entry('a/nested/deep/leaf')]}
+const pending=[],calls=[],unhandled=[],persisted=[{id:'old-log',operation:'delete',status:'succeeded',total:1,moved:1}]
+let cancelled=0,deferredList=null,listResolve,inspected=0
+addEventListener('unhandledrejection',event=>unhandled.push(String(event.reason)))
+const dispatch=(name,data)=>window._wails.dispatchWailsEvent({name,data})
+setTransport({async call(object,method,windowName,request){
+ if(object===10){cancelled++;return}
+ if(object!==0)return
+ const name=request.methodName.split('.').pop(),path=request.args[0]
+ if(name==='Home')return {home:'/center',locations:[]}
+ if(name==='Tasks')return [...persisted]
+ if(name==='List'){
+  if(path==='/denied')throw new Error('目录无法读取')
+  if(path===deferredList)return new Promise(resolve=>{listResolve=resolve})
+  return lists[path]||[]
+ }
+ if(name==='MeasureDirectory'){
+  calls.push(path)
+  return new Promise((resolve,reject)=>pending.push({path,event:request.args[1],resolve,reject}))
+ }
+ if(name==='InspectTask'){inspected++;return {...persisted.find(t=>t.id===path),items:[{source:'/source/a',target:'/target/a',error:''}]}}
+ throw new Error('意外接口：'+name)
+}})
+await import('../src/main.ts')
+const state=document.querySelector('#app').__vue_app__._instance.setupState
+const assert=(value,message)=>{if(!value)throw new Error(message)}
+const flush=async()=>{for(let i=0;i<25;i++)await nextTick()}
+const button=label=>document.querySelector(`[aria-label="${label}"]`)
+const click=async label=>{assert(button(label),'找不到按钮：'+label);button(label).click();await flush()}
+const finish=async(bytes,error='')=>{
+ assert(pending.length===1,'统计没有顺序执行：'+pending.length)
+ pending.shift().resolve({bytes,error,files:2,folders:1});await flush()
+}
+const operation=(status='running',id='20261106-120000.000')=>({id,operation:'copy',status,phase:'正在处理',started:'2026-11-06T12:00:00+08:00',total:2,moved:status==='running'?0:2})
+const emitOperation=async task=>{persisted.splice(0,persisted.length,task,...persisted.filter(t=>t.id!==task.id));dispatch('xfile:operation',task);await flush()}
+try{
+ await flush()
+ await click('任务中心')
+ assert(state.tasks.length===1&&!document.querySelector('.center-operation')&&document.querySelector('.center-empty'),'历史日志进入了临时任务中心')
+ await click('收起任务中心')
+ const glyph=button('任务中心').querySelector('svg')
+ assert(glyph.getAttribute('fill')==='none'&&glyph.getAttribute('stroke-width')==='1.5'&&getComputedStyle(glyph).width==='15px','任务图标未使用均匀细线')
+ await click('展开 a');await click('展开 nested')
+ assert(calls.length===0,'批量计算前展开触发了扫描')
+ await click('计算当前目录全部文件夹大小')
+ assert(state.sizeTasks.length===3&&pending[0].path==='/center/a','表头批量计算超出当前层级')
+ await click('展开 deep')
+ assert(state.sizeTasks.length===3&&!calls.includes('/center/link'),'未计算的父级触发下一级或跟随了链接')
+ dispatch(pending[0].event,{files:9,folders:3,bytes:99});await flush()
+ await click('任务中心')
+ assert(document.querySelector('.task-center-trigger .spin')&&document.querySelector('.size-current').textContent.includes('9 个文件'),'动画或扫描进度缺失')
+ assert(document.querySelectorAll('.size-details li').length===3&&!document.querySelector('.task-center-panel details'),'计算记录没有直接平铺')
+ await click('收起任务中心');assert(pending.length===1,'收起停止了任务')
+ await finish(1024)
+ assert(state.sizeTasks.length===4,'父级成功后未把已展开的下一层加入同批')
+ await finish(32,'/center/b/private: permission denied');await finish(0);await finish(2048);await finish(100);await finish(48,'/center/a/nested/deep/leaf: operation not permitted')
+ assert(!state.sizesPending&&state.directorySizes['/center/b']===undefined&&state.directorySizes['/center/a/nested/deep/leaf']===undefined,'失败回填了不完整大小')
+ assert(document.querySelector('.task-center-notice').textContent.includes('2 个失败'),'失败数量提示缺失')
+ assert(!document.querySelector('.toast-container').textContent.includes('permission denied'),'权限错误仍弹出 toast')
+ await click('任务中心')
+ assert(document.querySelectorAll('.size-item-error').length===2,'失败没有直接展示')
+ const panel=document.querySelector('.task-center-panel').getBoundingClientRect()
+ assert(panel.left>=0&&panel.right<=innerWidth&&panel.top>=0&&panel.bottom<=innerHeight,'任务中心超出最小窗口')
+ assert(!document.querySelector('.task-center-panel').textContent.includes('文件操作记录会保存')&&!document.querySelector('.task-center-panel').textContent.includes('仅当前目录有效')&&!document.querySelector('.task-center-panel footer'),'指定文案或历史入口未移除')
+ const before=calls.length
+ await click('收起 deep');await click('展开 deep')
+ assert(calls.length===before&&state.sizeTasks.length===6,'重复展开失败项目清空了当前展示或反复重试')
+ await click('重新计算 /center/b')
+ assert(state.sizeTasks.length===1&&state.sizeTasks[0].path==='/center/b','重试没有替换上一批')
+ assert(state.directorySizes['/center/a']===1024,'清理展示误删列表大小缓存')
+ await finish(15)
+ await click('计算文件夹 leaf 的大小');await finish(0)
+ assert(state.sizeTasks.length===1&&state.sizeTasks[0].path.endsWith('/leaf'),'下一次单项计算残留旧记录')
+ await click('收起任务中心')
+ assert(document.querySelector('.task-center-trigger').classList.contains('center-success'),'成功后没有绿色对勾')
+ assert(!document.querySelector('.task-center-notice')&&!document.querySelector('.task-center-trigger .spin'),'计算成功后仍弹出文字提示或保留 loading')
+ await new Promise(resolve=>setTimeout(resolve,2750));await flush()
+ assert(!document.querySelector('.task-center-notice')&&!document.querySelector('.task-center-trigger').classList.contains('center-success')&&button('任务中心'),'完成提示未消失或入口也消失了')
+ await click('展开 leaf')
+ assert(state.sizeTasks.length===1&&state.sizeTasks[0].path.endsWith('/twig'),'完成后新展开没有开启下一批')
+ await finish(0)
+ assert(!document.querySelector('.task-center-notice')&&document.querySelector('.task-center-trigger').classList.contains('center-success'),'下一批计算完成时未保持仅绿色对勾反馈')
+ const revision=state.centerRevision
+ state.calculateAllDirectorySizes();await flush()
+ assert(state.centerRevision===revision&&state.sizeTasks[0].path.endsWith('/twig'),'无新计算项目仍清空当前任务')
+ await click('最近访问目录');await click('任务中心')
+ assert(!document.querySelector('.recent-panel'),'最近目录与任务面板同时打开')
+ button('收起任务中心').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));await flush()
+ assert(!document.querySelector('.task-center-panel')&&document.activeElement===button('任务中心'),'Escape 未收起并恢复焦点')
+ await click('任务中心');document.querySelector('.file-panel').dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));await flush()
+ assert(!document.querySelector('.task-center-panel'),'点击外部没有收起')
+ state.changeSort('modified');state.changeSort('modified');await state.refreshFiles();await flush()
+ assert(state.sortField==='modified'&&state.sortDirection==='desc'&&!state.sizeTasks.length&&!Object.keys(state.directorySizes).length,'刷新排序或临时清理回归')
+ await state.navigate('/denied');await flush()
+ assert(state.path==='/center'&&state.sortField==='modified'&&state.sortDirection==='desc','失败导航改变了排序')
+ await state.navigate('/other');await flush()
+ assert(state.sortField==='name'&&state.sortDirection==='asc','进入新目录继承了排序')
+ state.changeSort('size');state.goHistory(-1);await flush()
+ assert(state.path==='/center'&&state.sortField==='name'&&state.sortDirection==='asc','后退继承了排序')
+ deferredList='/center/a';await click('展开 a');await click('计算当前目录全部文件夹大小')
+ const late=pending.shift(),offset=calls.length
+ await state.navigate('/other');await flush()
+ listResolve(lists['/center/a']);late.resolve({bytes:777,error:'cancelled after navigation',files:1,folders:0});await flush()
+ dispatch(late.event,{files:100,folders:1,bytes:999});await flush()
+ assert(calls.length===offset&&cancelled===1&&!state.sizeTasks.length&&!Object.keys(state.directorySizes).length,'晚返回污染新目录或继续排队')
+ deferredList=null
+ await emitOperation(operation())
+ await click('任务中心')
+ assert(document.querySelectorAll('.center-operation').length===1&&document.querySelector('.center-operation').textContent.includes('复制')&&!state.sizeTasks.length,'文件操作未替换计算批次')
+ await state.navigate('/another');await flush()
+ assert(state.centerOperation.id===operation().id,'导航清掉了最新写入任务')
+ await click('任务中心');document.querySelector('.center-operation').click();await flush()
+ assert(document.querySelector('.operation-dialog').textContent.includes('等待结果'),'运行中的操作被标为已完成')
+ await emitOperation(operation('succeeded'))
+ assert(inspected===2&&!document.querySelector('.operation-dialog').textContent.includes('等待结果'),'运行详情未同步完成结果')
+ button('关闭操作结果').click();await new Promise(requestAnimationFrame)
+ const move={...operation('running','20261106-123000.000'),operation:'move'}
+ await emitOperation(move);await click('任务中心')
+ assert(document.querySelectorAll('.center-operation').length===1&&document.querySelector('.center-operation').textContent.includes('移动')&&!document.querySelector('.center-operation').textContent.includes('复制'),'新文件操作没有替换旧操作')
+ await emitOperation({...move,status:'succeeded',moved:2})
+ state.fileBusy=true;await flush()
+ assert(!state.centerOperation&&state.centerKind==='operation','新操作准备期间仍显示旧任务')
+ state.fileBusy=false;await flush()
+ await state.navigate('/center');await flush();await click('计算文件夹 a 的大小')
+ assert(!state.centerOperation&&state.sizeTasks.length===1&&persisted.length===3,'计算没有替换文件操作，或错误清理了持久日志')
+ await finish(333);await emitOperation(operation('succeeded'))
+ assert(!state.centerOperation&&state.centerKind==='sizes','旧文件操作的完成通知恢复了过期展示')
+ const merge={id:'20261106-130000.000',status:'running',total:10,moved:2,phase:'正在移动',bytes:100,doneBytes:20}
+ state.beginCenterTask('operation');state.task=merge;state.centerOperation=merge;await flush();await click('任务中心')
+ assert(document.querySelector('.task-center-panel .task-dock').textContent.includes('2 / 10')&&!state.sizeTasks.length,'归并未替换上一次计算')
+ const old={id:'20261105-old',status:'succeeded',total:3,moved:3}
+ await state.inspectTask(old);await flush()
+ assert(document.querySelector('.merge-result-dialog').open&&document.querySelector('.merge-result-dialog .task-dock').textContent.includes('3 / 3'),'历史归并没有独立查看')
+ assert(state.task.id===merge.id&&state.centerOperation.id===merge.id&&state.running,'历史查看覆盖了当前任务')
+ document.querySelector('.merge-result-dialog [aria-label="关闭任务结果"]').click();await new Promise(requestAnimationFrame)
+ state.task={...merge,status:'succeeded',moved:10};state.centerOperation=state.task;await flush()
+ assert(document.querySelector('.task-center-panel .task-dock').textContent.includes('10 / 10'),'归并结果没有更新')
+ state.view='tasks';await state.loadTasks();await flush()
+ assert(document.querySelectorAll('.task-card').length===3&&persisted.length===3&&unhandled.length===0,'持久日志回归或出现未处理错误：'+unhandled)
+ window.taskCenterResult={passed:true,calculations:calls.length,cancelled}
+ document.title='PASS · 任务中心与目录计算检查'
+}catch(error){
+ window.taskCenterResult={passed:false,error:String(error)};document.title='FAIL · '+error.message;console.error(error)
+}
+</script></body></html>

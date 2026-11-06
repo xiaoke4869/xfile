@@ -1,14 +1,16 @@
 <script setup lang="ts">
+import { vScrollbars } from '../scrollbars'
 import { nextTick,onUnmounted,ref,watch } from 'vue'
-import { CopyDocument,Delete,FolderOpened,DocumentCopy,EditPen,Plus,Document } from '@element-plus/icons-vue'
+import { CopyDocument,Delete,FolderOpened,DocumentCopy,EditPen,Plus,Document,TopRight,Refresh } from '@element-plus/icons-vue'
 import { api } from '../api'
 import { base } from '../format'
+import { dropSources } from '../file-drag'
 import MoveDirectoryPicker from './MoveDirectoryPicker.vue'
 import RenameDialog from './RenameDialog.vue'
-import type { Entry,OperationResult } from '../types'
+import type { Entry,OperationResult,GroupEntriesResult } from '../types'
 
-const props=defineProps<{selected:Entry[];directory:string;running:boolean;active:boolean}>()
-const emit=defineEmits<{busy:[value:boolean];refresh:[];notice:[message:string];error:[message:string];newFolder:[];info:[]}>()
+const props=defineProps<{selected:Entry[];directory:string;running:boolean;active:boolean;loading?:boolean;paneId?:number}>()
+const emit=defineEmits<{busy:[value:boolean];refresh:[];changed:[];grouped:[directory:string,folder:string];notice:[message:string];error:[message:string];newFolder:[];info:[];navigate:[path:string]}>()
 const clipboard=ref<string[]>([]),menu=ref<HTMLDivElement>(),shown=ref(false),position=ref({left:'0px',top:'0px'})
 const dialog=ref<HTMLDialogElement>(),pending=ref<{kind:'move'|'delete';paths:string[];target:string}|null>(null),working=ref(false)
 const directoryPicker=ref<InstanceType<typeof MoveDirectoryPicker>>()
@@ -37,10 +39,10 @@ watch(shown,value=>{
  else cleanup()
 })
 function cleanup(){window.removeEventListener('pointerdown',outside);window.removeEventListener('resize',dismiss);window.removeEventListener('scroll',dismiss,true)}
-watch(()=>props.active,()=>{close();dialog.value?.close();directoryPicker.value?.cancel();renameDialog.value?.cancel()})
+watch(()=>[props.active,props.paneId],()=>{close();dialog.value?.close();directoryPicker.value?.cancel();renameDialog.value?.cancel()})
 watch(()=>props.running,running=>{if(running)close()})
 onUnmounted(cleanup)
-defineExpose({open})
+defineExpose({open,dropEntries})
 function keydown(event:KeyboardEvent){
  if(event.key==='Escape'||event.key==='Tab'){if(event.key==='Escape')event.preventDefault();close(true);return}
  const buttons=Array.from(menu.value?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')||[])
@@ -49,13 +51,49 @@ function keydown(event:KeyboardEvent){
  if(next>=0){event.preventDefault();buttons[next]?.focus()}
 }
 function copy(){clipboard.value=props.selected.map(e=>e.path);close(true);emit('notice',`已复制 ${clipboard.value.length} 个项目`)}
+function refresh(){
+ if(!background.value||!props.directory||props.running||props.loading||!props.active)return
+ close(true);emit('refresh')
+}
+async function openSelected(){
+ const entry=props.selected.length===1?props.selected[0]:undefined
+ close(true)
+ if(!entry||entry.link||background.value||props.running||!props.active)return
+ if(entry.dir){emit('navigate',entry.path);return}
+ try{await api('OpenFile',entry.path)}catch(error){emit('error','打开文件失败：'+String(error))}
+}
 function rename(){close(true);if(props.selected.length&&!props.running)renameDialog.value?.open(props.selected)}
+async function groupSelected(){
+ if(props.running||working.value||!props.active||background.value||!props.directory||props.selected.length<2||props.selected.some(entry=>entry.link))return
+ await groupFiles(props.selected.map(entry=>entry.path))
+}
+async function dropEntries(sources:Entry[],target:Entry){
+ if(props.running||working.value||props.loading||!props.active||!sources.length||target.link||sources.some(entry=>entry.link))return
+ if(target.dir){
+  const paths=dropSources(sources,target).map(entry=>entry.path)
+  if(paths.length)await perform('move',paths,target.path)
+ }
+ else if(sources.every(entry=>!entry.dir))await groupFiles(sources.map(entry=>entry.path),target.path)
+}
+async function groupFiles(paths:string[],target=''){
+ const directory=props.directory
+ close(true);working.value=true;emit('notice','');emit('busy',true)
+ let folder=''
+ try{
+  const result=target?await api<GroupEntriesResult>('GroupFiles',paths,target):await api<GroupEntriesResult>('GroupEntries',paths,directory);folder=result.folder
+  const successful=result.items.filter(item=>!item.error),failed=result.items.filter(item=>item.error)
+  forgetMoved(successful.map(item=>item.source))
+  if(failed.length)emit('error',`${failed.length} 个项目移动失败，请在任务中心查看详情`)
+  else emit('notice',`已将 ${successful.length} 个项目移入 ${base(folder)}`)
+ }catch(error){emit('error',String(error))}
+ finally{working.value=false;emit('busy',false);emit('grouped',directory,folder)}
+}
 function renamed(result:OperationResult){
  const successful=result.items.filter(i=>!i.error&&i.source!==i.target),failed=result.items.filter(i=>i.error)
  forgetMoved(successful.map(i=>i.source))
  if(successful.length)emit('notice',`已重命名 ${successful.length} 个项目`)
  if(failed.length)emit('error',failed.map(i=>`${base(i.source)}：${i.error}`).join('\n'))
- emit('refresh')
+ emit('changed')
 }
 async function prepare(kind:'move'|'delete'){
  const paths=props.selected.map(e=>e.path);close(true)
@@ -83,7 +121,7 @@ async function perform(kind:'copy'|'move'|'delete',paths:string[],target:string)
   if(successful.length)emit('notice',`${kind==='copy'?'已粘贴':kind==='move'?'已移动':'已移入废纸篓或回收站'} ${successful.length} 个项目`)
   if(failed.length)emit('error',failed.map(i=>`${base(i.source)}：${i.error}`).join('\n'))
  }catch(e){emit('error',String(e))}
- finally{working.value=false;emit('busy',false);emit('refresh')}
+ finally{working.value=false;emit('busy',false);emit('changed')}
 }
 function confirm(){const action=pending.value;if(action)perform(action.kind,action.paths,action.target)}
 function paste(){const paths=[...clipboard.value],target=props.directory;if(paths.length&&target)perform('copy',paths,target)}
@@ -103,6 +141,8 @@ function paste(){const paths=[...clipboard.value],target=props.directory;if(path
    </template>
    <template v-else>
    <template v-if="selected.length">
+    <button v-if="selected.length===1&&!selected[0]!.link" role="menuitem" @click="openSelected"><FolderOpened v-if="selected[0]!.dir"/><TopRight v-else/>{{selected[0]!.dir?'进入':'打开'}}</button>
+    <button v-if="selected.length>1" role="menuitem" :disabled="!directory||working||selected.some(entry=>entry.link)" @click="groupSelected"><Plus/>用所选项目新建文件夹（{{selected.length}}个项目）</button>
     <button role="menuitem" @click="close(true);emit('info')"><Document/>显示简介</button>
     <div class="context-separator" role="separator"></div>
     <button role="menuitem" @click="copy"><CopyDocument/>复制</button>
@@ -115,20 +155,21 @@ function paste(){const paths=[...clipboard.value],target=props.directory;if(path
     <button role="menuitem" :disabled="!directory" @click="paste"><DocumentCopy/>粘贴<span>到当前目录 · {{clipboard.length}} 项</span></button>
    </template>
    </template>
+   <div class="context-separator" role="separator"></div>
+   <button role="menuitem" :disabled="!background||!directory||running||loading" @click="refresh"><Refresh/>刷新</button>
   </div>
  </Teleport>
  <MoveDirectoryPicker ref="directoryPicker" @select="selectMoveTarget"/>
  <RenameDialog ref="renameDialog" :running="running" @busy="working=$event;emit('busy',$event)" @complete="renamed"/>
- <dialog ref="dialog" class="confirm-dialog" @close="pending=null">
+ <dialog v-scrollbars ref="dialog" class="confirm-dialog" @close="pending=null">
   <template v-if="pending">
    <div class="dialog-icon"><Delete v-if="pending.kind==='delete'"/><FolderOpened v-else/></div>
    <h2>{{pending.kind==='delete'?'删除所选项目？':'移动所选项目？'}}</h2>
    <p v-if="pending.kind==='delete'">将 {{pending.paths.length}} 个项目移入系统废纸篓或回收站。</p>
    <p v-else>将 {{pending.paths.length}} 个项目移动到以下目录。同名项目自动加序号，不覆盖现有内容。</p>
    <div v-if="pending.target" class="confirm-target">{{pending.target}}</div>
-   <ul class="operation-paths"><li v-for="p in pending.paths" :key="p" :title="p">{{p}}</li></ul>
+   <ul v-scrollbars class="operation-paths"><li v-for="p in pending.paths" :key="p" :title="p">{{p}}</li></ul>
    <div class="dialog-actions"><button class="button" @click="dialog?.close()">取消</button><button :class="['button',pending.kind==='delete'?'danger-button':'primary']" :disabled="running||working" @click="confirm">{{pending.kind==='delete'?'确认删除':'确认移动'}}</button></div>
   </template>
  </dialog>
- <div v-if="working" class="file-operation-status" role="status" aria-live="polite">正在处理文件，请稍候…</div>
 </template>

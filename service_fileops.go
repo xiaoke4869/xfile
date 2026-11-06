@@ -25,6 +25,21 @@ func (s *FileService) CountDirectory(ctx context.Context, path, eventName string
 	})
 }
 
+type DirectoryMeasurement struct {
+	core.DirectoryCount
+	Error string `json:"error,omitempty"`
+}
+
+// Expected filesystem failures are task results, including when a cancelled call finishes late.
+func (s *FileService) MeasureDirectory(ctx context.Context, path, eventName string) DirectoryMeasurement {
+	count, err := s.CountDirectory(ctx, path, eventName)
+	result := DirectoryMeasurement{DirectoryCount: count}
+	if err != nil {
+		result.Error = err.Error()
+	}
+	return result
+}
+
 func (s *FileService) beginFileOperation() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -177,6 +192,103 @@ func (s *FileService) CreateFolder(directory, name string) (string, error) {
 		return "", err
 	}
 	return result.Items[0].Target, nil
+}
+
+type GroupEntriesResult struct {
+	Folder string               `json:"folder"`
+	Items  []core.OperationItem `json:"items"`
+}
+
+// GroupEntries journals folder creation and verified moves as one operation.
+func (s *FileService) GroupEntries(paths []string, directory string) (GroupEntriesResult, error) {
+	return s.groupEntries(paths, directory, false)
+}
+
+// GroupFiles includes the receiving file and creates the folder beside it.
+func (s *FileService) GroupFiles(paths []string, target string) (GroupEntriesResult, error) {
+	all := append(append([]string{}, paths...), target)
+	return s.groupEntries(all, filepath.Dir(target), true)
+}
+
+func (s *FileService) groupEntries(paths []string, directory string, filesOnly bool) (GroupEntriesResult, error) {
+	group := GroupEntriesResult{}
+	result, err := s.fileOperation("group", paths, directory, func() (core.OperationResult, error) {
+		if len(paths) < 2 {
+			return core.OperationResult{}, errors.New("请至少选择两个项目")
+		}
+		sources, err := s.operationPaths(paths)
+		if err != nil {
+			return core.OperationResult{}, err
+		}
+		if filesOnly {
+			if len(sources) != len(paths) {
+				return core.OperationResult{}, errors.New("合成目标不能是所选文件，来源不能重复")
+			}
+			for _, source := range sources {
+				info, err := os.Lstat(source)
+				if err != nil {
+					return core.OperationResult{}, err
+				}
+				if !info.Mode().IsRegular() {
+					return core.OperationResult{}, errors.New("只有普通文件可以拖到文件上合成文件夹")
+				}
+			}
+		}
+		destination, err := core.Canonical(directory)
+		if err != nil {
+			return core.OperationResult{}, err
+		}
+		if err = core.CheckParents(destination); err != nil {
+			return core.OperationResult{}, err
+		}
+		journal, err := core.Canonical(s.tasksPath)
+		if err != nil {
+			return core.OperationResult{}, err
+		}
+		if key := core.ProbeNameKey(journal); core.Within(key(journal), key(destination)) {
+			return core.OperationResult{}, errors.New("不能在 XFile 任务日志目录内新建文件夹")
+		}
+		key := core.ProbeNameKey(destination)
+		for _, source := range sources {
+			if key(source) == key(destination) || !filesOnly && !core.Within(key(destination), key(source)) {
+				return core.OperationResult{}, errors.New("所选项目必须位于当前目录内")
+			}
+		}
+		name := "用所选项目新建的文件夹"
+		if filesOnly {
+			name = "合成的文件夹"
+		}
+		for n := 1; ; n++ {
+			candidate := name
+			if n > 1 {
+				candidate = fmt.Sprintf("%s_%d", name, n)
+			}
+			folder := filepath.Join(destination, candidate)
+			if err = os.Mkdir(folder, 0755); os.IsExist(err) {
+				continue
+			}
+			if err != nil {
+				return core.OperationResult{}, err
+			}
+			group.Folder = folder
+			break
+		}
+		moved, moveErr := core.TransferEntries(context.Background(), sources, group.Folder, true)
+		if moveErr != nil {
+			// Folder creation succeeded; keep its path and report failed moves in the task.
+			for _, source := range sources {
+				moved.Items = append(moved.Items, core.OperationItem{Source: source, Target: group.Folder, Error: moveErr.Error()})
+			}
+		}
+		for i := range moved.Items {
+			if moved.Items[i].Target == "" {
+				moved.Items[i].Target = group.Folder
+			}
+		}
+		return moved, nil
+	})
+	group.Items = result.Items
+	return group, err
 }
 
 // EntryInfo reads metadata for the current directory's information dialog.

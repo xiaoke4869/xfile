@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vScrollbars } from '../scrollbars'
 import { computed,nextTick,onUnmounted,reactive,ref,watch } from 'vue'
 import { Close,MoreFilled,ArrowRight } from '@element-plus/icons-vue'
 import { api } from '../api'
@@ -60,12 +61,12 @@ defineExpose({open,cancel})
      <div v-if="config.mode!=='replace'" class="rename-options"><label class="form-label">{{config.mode==='format'?'编号位置':'添加位置'}}<AppSelect v-model="config.position" :disabled="working" :aria-label="config.mode==='format'?'编号位置':'添加位置'" :options="[{value:'before',label:'在名称之前'},{value:'after',label:'在名称之后'}]"/></label><label v-if="config.mode==='format'" class="form-label">开始数字<input v-model.number="config.start" type="number" min="0" max="9007199254740991" step="1" required/></label></div>
     </template>
    </fieldset>
-   <p v-if="error" class="rename-error" role="alert">{{error}}</p>
-   <ul v-if="preview?.issues.length" class="rename-errors" role="alert"><li v-for="issue in preview.issues" :key="issue">{{issue}}</li></ul>
+   <p v-scrollbars v-if="error" class="rename-error" role="alert">{{error}}</p>
+   <ul v-scrollbars v-if="preview?.issues.length" class="rename-errors" role="alert"><li v-for="issue in preview.issues" :key="issue">{{issue}}</li></ul>
    <div class="dialog-actions"><button type="button" class="button" :disabled="working" @click="cancel">取消</button><button type="submit" class="button primary" :disabled="!canRename">{{working?'正在重命名…':'重命名'}}</button></div>
    <footer class="rename-preview" :aria-busy="loading">
     <div class="rename-preview-bar"><span class="rename-preview-label">预览</span><div class="rename-example" role="status" aria-live="polite"><span v-if="loading" class="muted">正在计算…</span><template v-else-if="preview?.items[0]"><span :title="base(preview.items[0].source)">{{base(preview.items[0].source)}}</span><ArrowRight/><strong :title="base(preview.items[0].target)">{{base(preview.items[0].target)}}</strong></template><span v-else class="muted">填写规则后查看新名称</span></div><button v-if="!single" type="button" class="icon-button" :aria-label="expanded?'收起详细预览':'展开详细预览'" :aria-expanded="expanded" aria-controls="rename-details" @click="expanded=!expanded"><MoreFilled/></button></div>
-    <div v-if="expanded&&!single" id="rename-details" class="rename-details"><div class="rename-preview-summary">{{preview?`共 ${preview.total} 项，${preview.changed} 项将更改；显示前 ${preview.items.length} 项`:'等待预览'}} · 按选择顺序编号</div><div v-for="item in preview?.items||[]" :key="item.source" class="rename-detail-row"><span :title="item.source">{{base(item.source)}}</span><ArrowRight/><span :class="{'error-text':item.error}" :title="item.error||item.target">{{item.error||base(item.target)}}</span></div></div>
+    <div v-scrollbars v-if="expanded&&!single" id="rename-details" class="rename-details"><div class="rename-preview-summary">{{preview?`共 ${preview.total} 项，${preview.changed} 项将更改；显示前 ${preview.items.length} 项`:'等待预览'}} · 按选择顺序编号</div><div v-for="item in preview?.items||[]" :key="item.source" class="rename-detail-row"><span :title="item.source">{{base(item.source)}}</span><ArrowRight/><span :class="{'error-text':item.error}" :title="item.error||item.target">{{item.error||base(item.target)}}</span></div></div>
    </footer>
   </form>
  </dialog>

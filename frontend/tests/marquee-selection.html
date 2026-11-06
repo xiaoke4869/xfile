@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>鼠标框选检查</title></head>
+<body><div id="app"></div>
+<!-- Start Vite, then run marquee-selection.playwright.mjs with a Playwright Page.
+     The companion check uses real pointer input, including pointer capture. -->
+<script type="module">
+import { setTransport } from '@wailsio/runtime'
+import { nextTick } from 'vue'
+window.webkit={messageHandlers:{external:{postMessage(){}}}}
+const entry=(path,dir=false,link=false)=>({path,name:path.split('/').pop(),dir,link,size:10,modified:0})
+const folder=entry('/marquee/00-folder',true),child=entry(folder.path+'/00-child',true)
+const roots=[folder,...Array.from({length:204},(_,i)=>entry(`/marquee/file-${String(i).padStart(3,'0')}.txt`,false,i===2))]
+const children=[child,entry(folder.path+'/nested.txt')],grandchild=entry(child.path+'/deep.txt')
+const calls=[]
+setTransport({async call(object,method,windowName,request){
+ if(object!==0)return
+ const name=request.methodName.split('.').pop(),path=request.args[0];calls.push({name,path})
+ if(name==='Home')return {home:'/marquee',locations:[]}
+ if(name==='Tasks')return []
+ if(name==='List')return path==='/marquee'?roots:path===folder.path?children:path===child.path?[grandchild]:[]
+ if(name==='OpenFile')return
+ throw new Error('不应调用：'+name)
+}})
+await import('../src/main.ts')
+for(let i=0;i<16;i++)await nextTick()
+window.marqueeFixture={state:document.querySelector('#app').__vue_app__._instance.setupState,roots,folder,child,children,grandchild,calls}
+</script></body></html>

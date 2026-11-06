@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vScrollbars } from '../scrollbars'
 import { nextTick,onMounted,onUnmounted,ref,useId } from 'vue'
 import { ArrowDown,Close,InfoFilled,Setting } from '@element-plus/icons-vue'
 import { Browser } from '@wailsio/runtime'
@@ -32,7 +33,7 @@ onUnmounted(()=>window.removeEventListener('pointerdown',dismiss))
    <button ref="item" role="menuitem" @click="showAbout"><InfoFilled/>关于 XFile</button>
   </div>
  </div>
- <dialog ref="about" class="confirm-dialog about-dialog" :aria-labelledby="`${id}-title`" @close="trigger?.focus()">
+ <dialog v-scrollbars ref="about" class="confirm-dialog about-dialog" :aria-labelledby="`${id}-title`" @close="trigger?.focus()">
   <button class="icon-button about-close" aria-label="关闭关于" @click="about?.close()"><Close/></button>
   <img class="about-icon" :src="appIcon" alt="XFile 应用图标" width="96" height="96"/>
   <h2 :id="`${id}-title`">XFile</h2>

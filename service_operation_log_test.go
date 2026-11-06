@@ -102,6 +102,29 @@ func TestFileOperationJournalAndReadOnlyActions(t *testing.T) {
 	}
 }
 
+func TestLiveFileOperationSummaryAndJournal(t *testing.T) {
+	root := t.TempDir()
+	s := &FileService{tasksPath: filepath.Join(root, "logs"), task: core.Task{ID: "old-merge", Status: "succeeded"}}
+	_, err := s.fileOperation("move", []string{"first", "second"}, "target", func() (core.OperationResult, error) {
+		live := s.Task()
+		if live.ID == "" || live.ID == "old-merge" || live.Operation != "move" || live.Status != "running" || live.Total != 2 || live.Items != nil {
+			t.Fatalf("wrong live operation: %+v", live)
+		}
+		stored, err := s.InspectTask(live.ID)
+		if err != nil || stored.Status != "running" || len(stored.Items) != 2 {
+			t.Fatalf("live journal: %+v %v", stored, err)
+		}
+		return core.OperationResult{Items: []core.OperationItem{{Source: "first", Target: "target/first"}, {Source: "second", Error: "permission denied"}}}, nil
+	})
+	if err != nil || s.fileOperationRunning || s.fileTask.Status != "partial_failed" || s.fileTask.Moved != 1 || s.fileTask.Items != nil {
+		t.Fatalf("terminal summary: %+v %v", s.fileTask, err)
+	}
+	detail, err := s.InspectTask(s.fileTask.ID)
+	if err != nil || len(detail.Items) != 2 || detail.Items[1].Error != "permission denied" || detail.Status != s.fileTask.Status {
+		t.Fatalf("persisted result differs from live result: %+v %v", detail, err)
+	}
+}
+
 func TestInterruptedOperationAndUnwritableJournal(t *testing.T) {
 	root := t.TempDir()
 	s := &FileService{tasksPath: filepath.Join(root, "logs")}

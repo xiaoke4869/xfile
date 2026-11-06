@@ -16,7 +16,7 @@ export function pathBreadcrumbs(path:string){
  return crumbs
 }
 export const statuses:Record<string,string>={running:'正在处理',succeeded:'校验通过',failed:'部分失败',needs_review:'需要核对',cancelled:'已取消',stale_plan:'计划已过期',recovery_required:'任务中断，需核对'}
-export function taskName(task:Task){return task.operation?({copy:'复制',move:'移动',rename:'重命名',delete:'删除',create_folder:'新建文件夹',export_directory:'导出目录结构'} as Record<string,string>)[task.operation]||task.operation:'归并 / 提取'}
+export function taskName(task:Task){return task.operation?({copy:'复制',move:'移动',rename:'重命名',delete:'删除',create_folder:'新建文件夹',group:'用所选项目新建文件夹',export_directory:'导出目录结构'} as Record<string,string>)[task.operation]||task.operation:'归并 / 提取'}
 export function taskStatus(task:Task){return task.operation?({succeeded:'已完成',failed:'失败',partial_failed:'部分完成'} as Record<string,string>)[task.status]||statuses[task.status]||task.status:statuses[task.status]||task.status}
 
 export function extractionTarget(source:string){

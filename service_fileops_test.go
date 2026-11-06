@@ -1,12 +1,62 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 	"xfile/internal/core"
 )
+
+func TestDirectoryMeasurementFailuresStayInTaskResults(t *testing.T) {
+	root := t.TempDir()
+	s := &FileService{tasksPath: filepath.Join(root, "logs")}
+	file := filepath.Join(root, "file.txt")
+	if err := os.WriteFile(file, []byte("content"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	result := s.MeasureDirectory(context.Background(), root, "directory-count:test")
+	if result.Error != "" || result.Bytes != 7 || result.Files != 1 {
+		t.Fatalf("measurement: %+v", result)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	for _, input := range []struct {
+		ctx         context.Context
+		path, event string
+	}{{ctx, root, "directory-count:cancel"}, {context.Background(), file, "directory-count:file"}, {context.Background(), filepath.Join(root, "missing"), "directory-count:missing"}, {context.Background(), root, "invalid"}} {
+		result = s.MeasureDirectory(input.ctx, input.path, input.event)
+		if result.Error == "" {
+			t.Fatalf("failure was lost: %+v", input)
+		}
+		data, err := json.Marshal(result)
+		var payload struct {
+			Bytes int64  `json:"bytes"`
+			Error string `json:"error"`
+		}
+		if err != nil || json.Unmarshal(data, &payload) != nil || payload.Error != result.Error || payload.Bytes != result.Bytes {
+			t.Fatalf("failure cannot be transported as task data: %s %v", data, err)
+		}
+	}
+	denied := filepath.Join(root, "denied")
+	if err := os.Mkdir(denied, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(denied, 0); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chmod(denied, 0700)
+	if _, err := os.ReadDir(denied); err != nil {
+		if result := s.MeasureDirectory(context.Background(), denied, "directory-count:denied"); result.Error == "" {
+			t.Fatalf("permission failure was lost: %+v", result)
+		}
+	}
+	if _, err := os.Stat(s.tasksPath); !os.IsNotExist(err) {
+		t.Fatalf("read-only measurement created logs: %v", err)
+	}
+}
 
 func TestBrowserOperationsProtectLogsAndSerialize(t *testing.T) {
 	root, _ := core.Canonical(t.TempDir())

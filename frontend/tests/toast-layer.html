@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>弹窗上方全局提示检查</title></head>
+<body><div id="app"></div>
+<script type="module">
+import '../src/main.ts'
+import { nextTick } from 'vue'
+const state=document.querySelector('#app').__vue_app__._instance.setupState
+const assert=(value,message)=>{if(!value)throw new Error(message)}
+const flush=async()=>{for(let i=0;i<15;i++)await nextTick();await new Promise(requestAnimationFrame)}
+let copied=''
+Object.defineProperty(navigator,'clipboard',{configurable:true,value:{async writeText(text){copied=text}}})
+const above=()=>{
+ const toast=document.querySelector('.app-toast'),rect=toast.getBoundingClientRect()
+ assert(document.querySelector('.toast-layer').matches(':popover-open'),'提示未进入顶层')
+ assert(document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2)?.closest('.app-toast')===toast,'提示被弹窗或遮罩挡住')
+}
+try{
+ state.path='/toast/path';await state.openSearch();await flush()
+ const searchInput=document.querySelector('[aria-label="搜索文件或文件夹名称"]')
+ assert(document.activeElement===searchInput,'搜索输入未获得焦点')
+ await state.copyPath();await flush()
+ assert(copied==='/toast/path'&&document.querySelector('.toast-message').textContent==='已复制路径','复制或成功提示失效')
+ assert(document.activeElement===searchInput,'显示提示抢了输入焦点')
+ above()
+ await state.openJump();await flush()
+ const jumpInput=document.querySelector('[aria-label="跳转目录路径"]')
+ assert(document.querySelector('.toast-layer').closest('dialog')===jumpInput.closest('dialog'),'后打开的弹窗仍遮挡提示')
+ assert(document.activeElement===jumpInput,'切换提示层抢了输入焦点')
+ above()
+ const close=document.querySelector('.toast-close'),rect=close.getBoundingClientRect()
+ assert(document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2)?.closest('.toast-close')===close,'弹窗上的提示关闭按钮不可交互')
+ close.click();await new Promise(resolve=>setTimeout(resolve,220));await flush()
+ assert(!document.querySelector('.app-toast'),'手动关闭提示失败')
+ state.showToast('完成一项');state.showToast('失败说明','error');await flush()
+ assert(document.querySelectorAll('.app-toast').length===2,'多条提示被覆盖')
+ assert(document.activeElement===jumpInput,'多个提示抢了输入焦点')
+ above()
+ await new Promise(resolve=>setTimeout(resolve,3250));await flush()
+ assert(!document.querySelector('.app-toast')&&!document.querySelector('.toast-layer').matches(':popover-open'),'提示未自动消失')
+ assert(jumpInput.closest('dialog').open,'提示自动消失关闭了业务弹窗')
+ state.jumpDialog.close();state.searchDialog.close();await flush()
+ await state.copyPath();await flush();above()
+ assert(document.querySelector('.toast-layer').parentElement===document.body,'关闭弹窗后提示没有回到页面')
+ window.toastLayerResult={passed:true}
+ document.title='PASS · 弹窗上方全局提示检查'
+}catch(error){window.toastLayerResult={passed:false,error:String(error)};document.title='FAIL · '+error.message;console.error(error)}
+</script></body></html>

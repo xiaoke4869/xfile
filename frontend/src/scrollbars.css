@@ -1,0 +1,18 @@
+.os-theme-xfile {
+ --os-size: 10px;
+ --os-padding-perpendicular: 2px;
+ --os-padding-axis: 2px;
+ --os-handle-border-radius: 999px;
+ --os-handle-bg: rgba(70, 78, 90, .28);
+ --os-handle-bg-hover: rgba(70, 78, 90, .48);
+ --os-handle-bg-active: rgba(70, 78, 90, .65);
+ --os-handle-min-size: 28px;
+ z-index: 5;
+ --wails-draggable: no-drag;
+}
+dialog[data-overlayscrollbars] { position: absolute; }
+.os-theme-xfile.os-scrollbar-auto-hide-hidden:not(.os-scrollbar-interaction),
+.os-theme-xfile.os-scrollbar-auto-hide-hidden:not(.os-scrollbar-interaction) * { pointer-events: none !important; }
+@media (prefers-reduced-motion: reduce) {
+ .os-theme-xfile, .os-theme-xfile * { transition: none !important; }
+}

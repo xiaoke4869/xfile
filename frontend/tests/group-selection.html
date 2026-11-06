@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>用所选项目新建文件夹检查</title></head>
+<body><div id="app"></div>
+<!-- Run npm run dev, then open /tests/group-selection.html. No real filesystem writes. -->
+<script type="module">
+import { setTransport } from '@wailsio/runtime'
+import { nextTick } from 'vue'
+window.webkit={messageHandlers:{external:{postMessage(){}}}}
+const entry=(name,dir=false)=>({path:'/group/'+name,name:name.split('/').pop(),dir,link:false,size:10,modified:0})
+const initial=[entry('folder-a',true),entry('folder-b',true),entry('file-a.txt'),entry('file-b.txt'),entry('file-c.txt')]
+const folderName='用所选项目新建的文件夹'
+let listing=[...initial],logs=[],request=null,failCreate=false,deferNavigation=false,navigationResolve
+const calls=[],pending=[],unhandled=[]
+addEventListener('unhandledrejection',e=>unhandled.push(String(e.reason)))
+const publish=task=>window._wails.dispatchWailsEvent({name:'xfile:operation',data:task})
+setTransport({async call(object,method,windowName,data){
+ if(object!==0)return
+ const name=data.methodName.split('.').pop(),args=data.args;calls.push({name,args})
+ if(name==='Home')return {home:'/group',locations:[]}
+ if(name==='Tasks')return [...logs]
+ if(name==='List'){
+  if(deferNavigation&&args[0]==='/other')return new Promise(resolve=>navigationResolve=resolve)
+  return args[0]==='/group'?[...listing]:[]
+ }
+ if(name==='GroupEntries'){
+  if(request)throw new Error('重复操作')
+  const task={id:'group-'+calls.length,operation:'group',status:'running',total:args[0].length,moved:0,phase:'正在处理',started:'2026-11-06T12:00:00+08:00'}
+  logs.unshift(task);publish(task)
+  return new Promise((resolve,reject)=>{request={paths:[...args[0]],directory:args[1],task,resolve,reject};pending.push(request)})
+ }
+ if(name==='InspectTask')return logs.find(task=>task.id===args[0])
+ if(name==='OpenFile')return
+ throw new Error('意外接口：'+name)
+}})
+await import('../src/main.ts')
+const state=document.querySelector('#app').__vue_app__._instance.setupState
+const assert=(condition,message)=>{if(!condition)throw new Error(message)}
+const flush=async()=>{for(let i=0;i<30;i++)await nextTick()}
+const menu=()=>document.querySelector('.file-context-menu')
+const action=()=>[...menu()?.querySelectorAll('button')||[]].find(b=>b.textContent.includes('用所选项目新建文件夹'))
+const context=async(selection)=>{
+ state.selected=selection;await flush()
+ const row=selection.length?[...document.querySelectorAll('tbody tr')].find(r=>r.querySelector('.file-label')?.getAttribute('title')===selection[0].path):document.querySelector('.file-panel')
+ assert(row,'测试行不存在')
+ row.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:innerWidth-3,clientY:innerHeight-3}));await flush()
+}
+const close=async()=>{menu()?.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));await flush()}
+const start=async(selection)=>{await context(selection);assert(action(),'多选菜单缺失');action().click();await flush();assert(request,'没有发起操作')}
+const finish=async(failed='')=>{
+ const job=request;request=null;pending.shift()
+ if(failCreate){
+  const task={...job.task,status:'failed',error:'无法创建文件夹：permission denied',items:job.paths.map(source=>({source,target:job.directory,error:'无法创建文件夹：permission denied'}))}
+  logs[0]=task;publish(task);job.reject(new Error(task.error));await flush();return ''
+ }
+ let name=folderName
+ for(let n=2;listing.some(e=>e.name===name);n++)name=folderName+'_'+n
+ const folder=entry(name,true),items=job.paths.map(source=>({source,target:folder.path+'/'+source.split('/').pop(),error:source===failed?'permission denied':''}))
+ listing=listing.filter(e=>!items.some(item=>!item.error&&item.source===e.path));listing.push(folder)
+ const task={...job.task,status:failed?'partial_failed':'succeeded',moved:items.filter(i=>!i.error).length,items}
+ logs[0]=task;publish(task);job.resolve({folder:folder.path,items});await flush();return folder.path
+}
+const reset=async()=>{listing=[...initial];failCreate=false;await state.navigate('/group');await flush()}
+window.groupSelectionFixture={state,reset,finish,calls}
+try{
+ await flush()
+ await context([initial[0]]);assert(!action(),'单目录显示多选入口');await close()
+ await context([initial[2]]);assert(!action(),'单文件显示多选入口');await close()
+ await context([]);assert(!action(),'空白菜单显示多选入口');await close()
+ for(const selection of [initial.slice(0,2),initial.slice(2,4),initial.slice(0,5)]){
+  await context(selection)
+  assert(action().textContent.trim()===`用所选项目新建文件夹（${selection.length}个项目）`,'多选类型或数量错误')
+  const box=menu().getBoundingClientRect()
+  assert(box.left>=0&&box.top>=0&&box.right<=innerWidth&&box.bottom<=innerHeight,'新增菜单超出窗口')
+  assert(document.activeElement===action(),'多选首项无法键盘访问')
+  await close()
+ }
+ await start(initial.slice(0,5))
+ assert(!menu()&&!document.querySelector('dialog[open]')&&state.fileBusy&&state.centerOperation.operation==='group'&&state.centerOperation.status==='running','没有直接执行、互斥或任务中心运行状态缺失')
+ assert(JSON.stringify(request.paths)===JSON.stringify(initial.map(e=>e.path))&&request.directory==='/group','API 未使用完整选择或当前目录')
+ state.fileContext(new MouseEvent('contextmenu',{clientX:300,clientY:300}),initial[0]);await flush()
+ assert(!menu()&&pending.length===1,'运行时重复触发')
+ let folder=await finish()
+ assert(state.path==='/group'&&state.selected.length===1&&state.selected[0].path===folder&&!state.fileBusy,'完成后未原地选中新文件夹')
+ assert(document.querySelector('tbody tr.selected .file-label').getAttribute('title')===folder&&logs.length===1&&state.tasks.length===1,'选中行或持久日志缺失')
+ await document.querySelector('[aria-label="任务中心"]').click();await flush()
+ assert(document.querySelector('.center-operation').textContent.includes('用所选项目新建文件夹')&&document.querySelector('.center-operation').textContent.includes('5 / 5'),'任务中心操作名称/结果错误')
+ document.querySelector('.center-operation').click();await flush()
+ assert(document.querySelector('.operation-dialog').open&&document.querySelectorAll('.operation-dialog .operation-item').length===5,'不能从任务中心查看逐项结果')
+ document.querySelector('[aria-label="关闭操作结果"]').click();await new Promise(requestAnimationFrame)
+
+ await reset();listing.push(entry(folderName),entry(folderName+'_2',true));await state.navigate('/group');await flush()
+ await start(initial.slice(2,4));folder=await finish()
+ assert(folder.endsWith('_3')&&state.selected[0].path===folder&&listing.some(e=>e.name===folderName&&!e.dir),'重名结果未正确展示或覆盖已有文件')
+ await reset();await start(initial.slice(0,2));await finish()
+ assert(state.selected[0].dir&&state.centerOperation.total===2,'纯目录操作失败')
+
+ await reset();await start(initial.slice(2,4));folder=await finish(initial[3].path)
+ assert(state.selected[0].path===folder&&listing.some(e=>e.path===initial[3].path)&&!listing.some(e=>e.path===initial[2].path),'部分失败丢失来源或取消成功结果')
+ await state.inspectTask(state.centerOperation);await flush()
+ assert(document.querySelector('.operation-dialog').textContent.includes('permission denied')&&state.centerOperation.status==='partial_failed','部分失败详情不在任务中心')
+ document.querySelector('[aria-label="关闭操作结果"]').click();await new Promise(requestAnimationFrame)
+
+ await reset();failCreate=true;await start(initial.slice(2,4));await finish()
+ assert(state.selected.length===0&&listing.length===initial.length&&state.path==='/group'&&state.centerOperation.status==='failed','创建失败仍移动或误选')
+ failCreate=false;await reset();await start(initial.slice(2,4))
+ await state.navigate('/other');await flush();await finish()
+ assert(state.path==='/other'&&!state.selected.length,'操作完成把用户拉回旧目录')
+ await reset();await start(initial.slice(2,4));state.view='tasks';await flush();await finish()
+ assert(state.view==='tasks'&&state.selected.length===2,'操作完成改变了用户视图或选择')
+ state.view='files';await reset();await start(initial.slice(2,4))
+ deferNavigation=true;const navigation=state.navigate('/other');await flush();await finish()
+ navigationResolve([]);await navigation;deferNavigation=false;await flush()
+ assert(state.path==='/other','操作完成打断了进行中的导航')
+
+ listing=[...Array.from({length:205},(_,i)=>entry('000-'+String(i).padStart(3,'0'),true)),...initial.slice(2,4)]
+ await state.navigate('/group');await flush()
+ // Select across pages, as the existing full-selection toolbar allows.
+ state.selected=[listing[0],listing[1]];await flush();await context(state.selected);action().click();await flush();folder=await finish()
+ assert(state.page>0&&state.selected[0].path===folder&&document.querySelector('tbody tr.selected'),'新建目录在后续分页时没有定位并选中')
+ const scroll=document.querySelector('.table-scroll'),selected=document.querySelector('tbody tr.selected').getBoundingClientRect(),bounds=scroll.getBoundingClientRect()
+ assert(selected.bottom<=bounds.bottom&&selected.top>=bounds.top,'选中新目录未滚入可视范围')
+ assert(calls.filter(c=>c.name==='GroupEntries').length===9&&unhandled.length===0,'操作次数错误或存在未处理异常：'+unhandled)
+ window.groupSelectionResult={passed:true,operations:logs.length};document.title='PASS · 用所选项目新建文件夹检查'
+}catch(error){window.groupSelectionResult={passed:false,error:String(error)};document.title='FAIL · '+error.message;console.error(error)}
+</script></body></html>

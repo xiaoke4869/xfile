@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>日志结果长路径展示检查</title></head>
+<body><div id="app"></div>
+<script type="module">
+import { setTransport } from '@wailsio/runtime'
+import { nextTick } from 'vue'
+window.webkit={messageHandlers:{external:{postMessage(){}}}}
+const filename='中文文件 空格 VeryLongFileName_'.repeat(14)+'.txt'
+const source='/来源目录/very-long-directory/'.repeat(10)+filename,target='/目标目录/another-long-directory/'.repeat(10)+filename
+const task={id:'long-path-result',operation:'move',status:'partial_failed',total:3,moved:1,started:'2026-11-06T12:00:00+08:00',items:[{source,target,error:''},{source:'/short.txt',target:'',error:''},{source:'/failed.txt',target:'/target/failed.txt',error:'没有权限，保留原始文件。'.repeat(20)}]}
+const calls=[],copied=[]
+setTransport({async call(object,method,windowName,data){
+ if(object===1&&method===0){copied.push(data.text);return}
+ if(object!==0)return
+ const name=data.methodName.split('.').pop();calls.push(name)
+ if(name==='Home')return {home:'/paths',locations:[]}
+ if(name==='List')return []
+ if(name==='Tasks')return [task]
+ if(name==='InspectTask')return task
+ if(name==='OpenReports')return
+ if(name==='ExportReports')return '/export/report.md'
+ throw new Error('意外接口：'+name)
+}})
+await import('../src/main.ts')
+const state=document.querySelector('#app').__vue_app__._instance.setupState
+const flush=async()=>{for(let i=0;i<20;i++)await nextTick();await new Promise(requestAnimationFrame)}
+const assert=(value,message)=>{if(!value)throw new Error(message)}
+window.operationPathsFixture={state,task,source,target,copied}
+try{
+ await flush();document.querySelector('[aria-label="任务与日志"]').click();await flush()
+ document.querySelector('.task-card .button').click();await flush()
+ const dialog=document.querySelector('.operation-dialog'),item=dialog.querySelector('.operation-item')
+ assert(dialog.open,'查看结果未打开')
+ const paths=[...item.querySelectorAll('.info-path')],heading=item.querySelector('h3'),status=item.querySelector('.operation-item-heading>span')
+ for(const element of [...paths,heading]){
+  const style=getComputedStyle(element)
+  assert(style.whiteSpace==='nowrap'&&style.textOverflow==='ellipsis'&&element.scrollWidth>element.clientWidth,'长内容未单行省略')
+  assert(element.clientHeight<parseFloat(style.fontSize)*2,'长内容换行增加了高度')
+ }
+ assert(paths[0].title===source&&paths[1].title===target&&heading.title===filename,'悬停无法查看完整内容')
+ assert(status.textContent==='已完成'&&status.clientWidth>0&&status.clientWidth>=status.scrollWidth,'状态被长文件名挤压')
+ assert(dialog.scrollWidth<=dialog.clientWidth,'结果弹窗横向溢出')
+ paths[0].click();await flush();paths[1].click();await flush()
+ assert(copied[0]===source&&copied[1]===target,'复制丢失完整路径')
+ const short=dialog.querySelectorAll('.operation-item')[1]
+ assert(short.querySelector('.info-path').textContent==='/short.txt'&&short.querySelector('dd:last-child').textContent==='—','短路径或空目标回归')
+ const error=dialog.querySelector('dd.error-text');assert(error.clientHeight>parseFloat(getComputedStyle(error).fontSize)*2,'错误信息被截断')
+ const actions=dialog.querySelectorAll('.dialog-actions button');actions[0].click();actions[1].click();await flush()
+ assert(calls.includes('OpenReports')&&calls.includes('ExportReports'),'报告操作回归')
+ document.querySelector('[aria-label="关闭操作结果"]').click();await flush();assert(!dialog.open,'结果弹窗不能关闭')
+ await state.inspectTask({...task,operation:'delete'});await flush();state.operationTask={...task,operation:'delete'};await flush()
+ assert(dialog.querySelectorAll('.operation-item')[1].querySelector('dd:last-child').textContent==='系统废纸篓或回收站','空删除目标提示回归')
+ window.operationPathsResult={passed:true};document.title='PASS · 日志结果长路径展示'
+}catch(error){window.operationPathsResult={passed:false,error:String(error)};document.title='FAIL · '+error.message;console.error(error)}
+</script></body></html>

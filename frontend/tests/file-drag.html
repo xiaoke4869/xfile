@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>拖拽移动与文件合成检查</title></head>
+<body><div id="app"></div>
+<!-- Start Vite, then run file-drag.playwright.mjs with a Playwright Page. No real filesystem writes. -->
+<script type="module">
+import { setTransport } from '@wailsio/runtime'
+import { nextTick } from 'vue'
+window.webkit={messageHandlers:{external:{postMessage(){}}}}
+const entry=(name,dir=false,link=false)=>({path:'/drag/'+name,name:name.split('/').pop(),dir,link,size:10,modified:0})
+const initial=[entry('00-target',true),entry('00-target/receiver.txt'),entry('00-target/sub',true),entry('00-target/sub/deep.txt'),entry('01-source',true),entry('01-source/child.txt'),entry('02-other',true),entry('10-a.txt'),entry('11-b.txt'),entry('12-c.txt'),entry('13-link',false,true),...Array.from({length:65},(_,i)=>entry(`20-scroll-${String(i).padStart(2,'0')}.txt`))]
+const calls=[],unhandled=[]
+let listing=[...initial],logs=[],request,heldList
+const deniedLists=new Set()
+const publish=task=>window._wails.dispatchWailsEvent({name:'xfile:operation',data:task})
+const children=dir=>listing.filter(e=>e.path.slice(0,e.path.lastIndexOf('/'))===dir)
+addEventListener('unhandledrejection',event=>unhandled.push(String(event.reason)))
+setTransport({async call(object,method,windowName,data){
+ if(object!==0)return
+ const name=data.methodName.split('.').pop(),args=data.args;calls.push({name,args})
+ if(name==='Home')return {home:'/drag',locations:[{name:'系统目录',path:'/system'}]}
+ if(name==='Tasks')return [...logs]
+ if(name==='List'){
+  if(deniedLists.has(args[0]))throw new Error('读取失败：permission denied')
+  if(heldList?.path===args[0]&&!heldList.resolve)return new Promise(resolve=>{heldList.resolve=resolve;heldList.result=children(args[0])})
+  return children(args[0])
+ }
+ if(name==='EntryInfo'){
+  if(args[0]==='/drag'||args[0]==='/')return {...entry(''),path:args[0],name:args[0]==='/'?'/':'drag',dir:true}
+  const found=listing.find(e=>e.path===args[0]);if(!found)throw new Error('文件不存在');return found
+ }
+ if(name==='OpenFile')return
+ if(name==='InspectTask')return logs.find(task=>task.id===args[0])
+ if(name==='TransferEntries'||name==='GroupFiles'){
+  if(request)throw new Error('重复操作')
+  const paths=name==='GroupFiles'?[...args[0],args[1]]:[...args[0]]
+  const task={id:'drag-'+calls.length,operation:name==='GroupFiles'?'group':'move',status:'running',total:paths.length,moved:0,phase:'正在处理',started:'2026-11-06T14:00:00+08:00'}
+  logs.unshift(task);publish(task)
+  return new Promise((resolve,reject)=>{request={name,args,paths,task,resolve,reject}})
+ }
+ throw new Error('意外接口：'+name)
+}})
+await import('../src/main.ts')
+const state=document.querySelector('#app').__vue_app__._instance.setupState
+const flush=async()=>{for(let i=0;i<30;i++)await nextTick()}
+async function reset(){if(request)throw new Error('操作未完成');listing=[...initial];deniedLists.clear();state.expandedDirectories={};await state.navigate('/drag');await flush();document.querySelector('.table-scroll').scrollTop=0}
+async function compact(){listing=listing.filter(e=>!e.name.startsWith('20-scroll'));await state.navigate('/drag');await flush()}
+async function finish(failure=''){
+ const job=request;if(!job)throw new Error('没有正在执行的拖拽操作');request=undefined
+ if(failure==='create'||failure==='missing'){
+  const message=failure==='missing'?'目标目录不存在':'permission denied'
+  const task={...job.task,status:'failed',error:message,items:job.paths.map(source=>({source,target:job.args[1],error:message}))}
+  logs[0]=task;publish(task);job.reject(new Error(message));await flush();return
+ }
+ let target=job.args[1],folder=''
+ if(job.name==='GroupFiles'){
+  const directory=target.slice(0,target.lastIndexOf('/')),base=directory+'/合成的文件夹'
+  folder=base;for(let n=2;listing.some(e=>e.path===folder);n++)folder=base+'_'+n
+  listing.push({...entry(''),name:folder.split('/').pop(),path:folder,dir:true});target=folder
+ }
+ const sources=job.paths.filter(source=>!job.paths.some(other=>other!==source&&source.startsWith(other+'/')))
+ const items=sources.map(source=>({source,target:target+'/'+source.split('/').pop(),error:source===failure?'permission denied':''}))
+ for(const item of items.filter(i=>!i.error))listing=listing.map(e=>e.path===item.source||e.path.startsWith(item.source+'/')?{...e,path:item.target+e.path.slice(item.source.length)}:e)
+ const task={...job.task,status:failure?'partial_failed':'succeeded',moved:items.filter(i=>!i.error).length,total:items.length,items}
+ logs[0]=task;publish(task);job.resolve(job.name==='GroupFiles'?{folder,items}:{items});await flush();return folder
+}
+window.dragFixture={state,initial,calls,unhandled,reset,compact,finish,flush,deniedLists,setListing(next){listing=next},deferList(path){heldList={path}},releaseList(){const held=heldList;heldList=undefined;held.resolve(held.result)},get request(){return request},get listing(){return listing},get logs(){return logs}}
+</script></body></html>

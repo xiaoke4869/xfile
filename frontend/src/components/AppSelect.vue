@@ -1,4 +1,5 @@
 <script setup lang="ts" generic="T extends string">
+import { vScrollbars } from '../scrollbars'
 import { computed,nextTick,onUnmounted,ref,useId,watch } from 'vue'
 import { ArrowDown,Check } from '@element-plus/icons-vue'
 
@@ -63,7 +64,7 @@ onUnmounted(cleanup)
 <template>
  <button v-bind="$attrs" ref="trigger" type="button" :class="['app-select',{expanded:opened}]" role="combobox" aria-haspopup="listbox" :disabled="disabled" :aria-expanded="opened" :aria-controls="opened?id:undefined" :aria-activedescendant="opened?`${id}-${active}`:undefined" @click="opened?close():open()" @keydown="keydown" @blur="close"><span>{{options[current]?.label||'请选择'}}</span><ArrowDown aria-hidden="true"/></button>
  <Teleport v-if="opened&&target" :to="target">
-  <div :id="id" ref="popup" class="app-select-menu" :style="position" role="listbox" :aria-label="String($attrs['aria-label']||'选项')" @pointerdown.prevent @click.stop>
+  <div v-scrollbars :id="id" ref="popup" class="app-select-menu" :style="position" role="listbox" :aria-label="String($attrs['aria-label']||'选项')" @pointerdown.prevent @click.stop>
    <div v-for="(option,index) in options" :id="`${id}-${index}`" :key="option.value" :class="['app-select-option',{active:index===active,selected:option.value===modelValue}]" role="option" :aria-selected="option.value===modelValue" :data-active="index===active" @pointermove="active=index" @click="choose(index)"><span>{{option.label}}</span><Check v-if="option.value===modelValue" aria-hidden="true"/></div>
   </div>
  </Teleport>
@@ -74,6 +75,6 @@ onUnmounted(cleanup)
 .app-select>span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.app-select>svg{width:12px;height:12px;color:#8b97a9;transition:transform .15s}
 .app-select:hover:not(:disabled){border-color:#b8bcc4;background:#fcfdff}.app-select.expanded{border-color:#b8bcc4;box-shadow:none}.app-select.expanded>svg{transform:rotate(180deg);color:var(--accent)}
 .app-select:disabled{background:#f3f5f8;color:#8a96a7;opacity:.65;box-shadow:none}
-.app-select-menu{position:fixed;z-index:110;overflow:auto;padding:5px;background:#fff;border:1px solid #dfe5ee;border-radius:9px;box-shadow:0 8px 26px #253a601f,0 2px 6px #253a600a;color:#394963;font:400 12px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;overscroll-behavior:contain;scrollbar-width:thin}
+.app-select-menu{position:fixed;z-index:110;overflow:auto;padding:5px;background:#fff;border:1px solid #dfe5ee;border-radius:9px;box-shadow:0 8px 26px #253a601f,0 2px 6px #253a600a;color:#394963;font:400 12px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;overscroll-behavior:contain}
 .app-select-option{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:9px 10px;border-radius:5px;cursor:pointer;min-height:35px}.app-select-option>span{overflow-wrap:anywhere}.app-select-option.active{background:#f0f4fb}.app-select-option.selected{color:var(--accent);font-weight:500}.app-select-option.selected.active{background:#edf3ff}.app-select-option svg{width:14px;height:14px;flex-shrink:0}
 </style>

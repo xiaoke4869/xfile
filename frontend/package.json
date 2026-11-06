@@ -1,6 +1,6 @@
 {
  "name":"xfile-frontend", "private":true, "version":"0.0.1", "type":"module",
  "scripts":{"dev":"vite --host 127.0.0.1","build":"vue-tsc --noEmit && vite build","build:dev":"npm run build","check":"vue-tsc --noEmit","icons:generate":"node ../scripts/generate-file-icons.mjs","test:icons":"node --experimental-strip-types --test tests/file-icons.test.mjs"},
- "dependencies":{"vue":"3.5.44","@wailsio/runtime":"3.0.0","@element-plus/icons-vue":"2.3.2"},
+ "dependencies":{"overlayscrollbars":"2.17.0","vue":"3.5.44","@wailsio/runtime":"3.0.0","@element-plus/icons-vue":"2.3.2"},
  "devDependencies":{"@vitejs/plugin-vue":"6.0.10","typescript":"~5.9.3","vite":"8.3.5","vue-tsc":"^3.1.0","@types/node":"^22.0.0"}
 }

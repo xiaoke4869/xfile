@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>按父级计算目录大小检查</title></head>
+<body><div id="app"></div>
+<!-- Start Vite, then open /tests/parent-size-calculation.html. Uses mock Wails calls. -->
+<script type="module">
+import {setTransport} from '@wailsio/runtime'
+import {nextTick} from 'vue'
+window.webkit={messageHandlers:{external:{postMessage(){}}}}
+const entry=(path,dir=true,link=false)=>({path,name:path.split('/').pop(),dir,link,size:12,modified:0})
+const root='/parent',a=entry(root+'/a'),b=entry(root+'/b'),child=entry(a.path+'/child'),sibling=entry(a.path+'/sibling'),deep=entry(child.path+'/deep'),leaf=entry(deep.path+'/leaf'),other=entry(b.path+'/other')
+const lists={[root]:[a,b],[a.path]:[child,sibling,entry(a.path+'/.hidden'),entry(a.path+'/file.txt',false),entry(a.path+'/link',true,true)],[child.path]:[deep],[deep.path]:[leaf],[b.path]:[other]}
+const calls=[],pending=[];let cancelled=0,lateList,resolveList
+setTransport({async call(object,method,windowName,request){
+ if(object===10){cancelled++;return}
+ if(object!==0)return
+ const name=request.methodName.split('.').pop(),path=request.args[0]
+ if(name==='Home')return {home:root,locations:[]}
+ if(name==='Tasks')return []
+ if(name==='List'){if(path===lateList)return new Promise(resolve=>resolveList=resolve);return lists[path]||[]}
+ if(name==='MeasureDirectory'){calls.push(path);return new Promise(resolve=>pending.push({path,resolve}))}
+ throw new Error('意外接口：'+name)
+}})
+await import('../src/main.ts')
+const state=document.querySelector('#app').__vue_app__._instance.setupState
+const assert=(value,message)=>{if(!value)throw new Error(message)}
+const flush=async()=>{for(let i=0;i<30;i++)await nextTick()}
+const click=async label=>{const button=document.querySelector(`[aria-label="${label}"]`);assert(button&&!button.disabled,'按钮不可用：'+label);button.click();await flush()}
+// These scenarios verify lazy size calculation with collapsed branches.
+// Refresh now preserves expansion, so collapse explicitly instead of relying on a reset.
+async function refreshCollapsed(){
+ for(const name of ['a','b'])if(document.querySelector(`[aria-label="收起 ${name}"]`))await click('收起 '+name)
+ await state.refreshFiles();await flush()
+}
+const finish=async(path,bytes=1,error='')=>{assert(pending.length===1&&pending[0].path===path,'计算顺序错误：'+JSON.stringify(pending.map(x=>x.path)));pending.shift().resolve({bytes,files:1,folders:0,error});await flush()}
+try{
+ await flush();await click('展开 a');await click('展开 child');await click('展开 deep')
+ assert(!calls.length,'未计算父目录仅展开就触发计算')
+ await click('计算文件夹 child 的大小');const batch=state.centerRevision
+ await finish(child.path,0)
+ assert(pending[0]?.path===deep.path&&!calls.includes(a.path)&&!calls.includes(sibling.path),'单项零字节成功未触发已展开下一层，或污染父/兄弟目录')
+ await finish(deep.path);assert(pending[0]?.path===leaf.path,'多级成功后未逐级补算')
+ await finish(leaf.path)
+ assert(state.centerRevision===batch&&state.sizeTasks.length===3,'已展开层级没有归入同批')
+ await click('展开 b');assert(!pending.length,'无关未计算父目录受单项计算影响')
+ await click('计算文件夹 b 的大小');await finish(b.path,10,'permission denied')
+ assert(!calls.includes(other.path),'失败父目录触发了子目录')
+ await click('收起 b');await click('展开 b');assert(!pending.length,'失败父目录重新展开自动重试')
+ await click('计算文件夹 b 的大小');await finish(b.path)
+ assert(pending[0]?.path===other.path,'父级重试成功未补算已展开下一层')
+ await finish(other.path)
+ await click('计算文件夹 a 的大小');await finish(a.path)
+ assert(pending[0]?.path===sibling.path&&!calls.includes(a.path+'/link'),'父级成功未跳过已成功子项或链接')
+ await finish(sibling.path);await finish(a.path+'/.hidden')
+ assert(!pending.length,'子文件或未展开层级仍在计算')
+ const before=calls.length
+ await click('收起 a');await click('展开 a');await click('展开 child');await click('展开 deep')
+ assert(calls.length===before,'重新展开重复计算成功结果')
+
+ await refreshCollapsed();await click('计算当前目录全部文件夹大小')
+ assert(state.sizeTasks.length===2,'表头计算不只控制本目录')
+ await finish(a.path);await finish(b.path)
+ assert(!pending.length&&Object.keys(state.directorySizes).length===2,'批量成功后提前扫描未展开层级')
+ await click('展开 a');assert(pending[0]?.path===child.path,'批量成功父级展开未计算下一层')
+ await finish(child.path,0,'denied');await finish(sibling.path);await finish(a.path+'/.hidden')
+ await click('展开 child');assert(!pending.length,'失败子目录展开后扫描孙目录')
+ await click('收起 a');await click('展开 a')
+ assert(!pending.length,'成功父目录再次展开自动重试失败子项')
+ await click('计算文件夹 child 的大小');await finish(child.path)
+ assert(!pending.length,'已收起孙层级被提前计算')
+ await click('展开 child');assert(pending[0]?.path===deep.path,'子目录单项成功后展开未计算孙目录')
+ await finish(deep.path);assert(!pending.length,'未展开的下一层被提前扫描')
+
+ await refreshCollapsed();await click('展开 a');await click('计算文件夹 a 的大小');await click('收起 a');await finish(a.path)
+ assert(!pending.length,'父级计算中收起后，成功仍计算下一层')
+ await click('展开 a');await finish(child.path);await finish(sibling.path);await finish(a.path+'/.hidden')
+ assert(!pending.length,'折叠期间成功后重新展开未正确计算一层')
+
+ await refreshCollapsed();await click('计算文件夹 a 的大小')
+ lateList=a.path;await click('展开 a');await finish(a.path)
+ assert(!pending.length,'列表返回前已发出子项请求')
+ resolveList(lists[a.path]);lateList=undefined;await flush()
+ assert(pending[0]?.path===child.path,'父级成功后迟到的目录列表未触发下一层')
+ await finish(child.path);await finish(sibling.path);await finish(a.path+'/.hidden')
+
+ await refreshCollapsed();await click('计算文件夹 a 的大小')
+ lateList=a.path;await click('展开 a');await finish(a.path)
+ assert(!pending.length,'展开目录列表未返回时扫描了子项')
+ const offset=calls.length
+ await state.navigate('/other');resolveList(lists[a.path]);lateList=undefined;await flush()
+ assert(calls.length===offset&&!Object.keys(state.directorySizes).length,'迟到展开返回污染新目录')
+ await state.navigate(root);await flush();await click('展开 a');await click('计算文件夹 a 的大小')
+ const late=pending.shift(),count=calls.length
+ await state.navigate('/other');late.resolve({bytes:1,files:1,folders:0});await flush()
+ assert(cancelled===1&&calls.length===count&&!Object.keys(state.directorySizes).length,'迟到计算返回触发了下一层')
+ assert(!state.tasks.length,'只读计算写入持久日志')
+ window.parentSizeResult={passed:true,calculations:calls.length,cancelled};document.title='PASS · 按父级计算目录大小检查'
+}catch(error){window.parentSizeResult={passed:false,error:String(error)};document.title='FAIL · '+error.message;console.error(error)}
+</script></body></html>

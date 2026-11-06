@@ -33,6 +33,7 @@ type FileService struct {
 	taskRunning          bool
 	fileOperationRunning bool
 	fileOperationID      string
+	fileTask             core.Task
 	tasksPath            string
 }
 
@@ -308,6 +309,9 @@ func (s *FileService) Task() core.Task {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	t := s.task
+	if s.fileOperationRunning {
+		t = s.fileTask
+	}
 	t.States = nil
 	if s.taskRunning || s.fileOperationRunning {
 		t.Status = "running"
@@ -407,12 +411,12 @@ func (s *FileService) InspectTask(id string) (core.Task, error) {
 	s.mu.Lock()
 	running := s.taskRunning || s.fileOperationRunning
 	s.mu.Unlock()
-	if running {
-		return core.Task{}, errors.New("请等待当前任务结束")
-	}
 	t, e := s.readTask(id)
 	if e != nil || t.Operation != "" {
 		return t, e
+	}
+	if running {
+		return core.Task{}, errors.New("请等待当前任务结束")
 	}
 	_, t, e = core.InspectRecovery(context.Background(), filepath.Join(s.tasksPath, id))
 	return t, e

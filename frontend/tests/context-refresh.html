@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><title>右键刷新检查</title></head>
+<body><div id="app"></div>
+<!-- Run Vite, then open /tests/context-refresh.html. No real filesystem operations. -->
+<script type="module">
+import { setTransport } from '@wailsio/runtime'
+import { nextTick } from 'vue'
+window.webkit={messageHandlers:{external:{postMessage(){}}}}
+const entry=(name,dir=false)=>({path:'/refresh/'+name,name,dir,link:false,size:10,modified:0})
+const folder=entry('folder',true),file=entry('file.txt'),added=entry('added.txt')
+let listing=[folder,file],fail=false,deferred=false,resolveList
+const calls=[]
+setTransport({async call(object,method,windowName,request){
+ if(object!==0)return
+ const name=request.methodName.split('.').pop();calls.push({name,args:request.args})
+ if(name==='Home')return {home:'/refresh',locations:[]}
+ if(name==='Tasks')return []
+ if(name==='List'){
+  if(fail)throw new Error('刷新失败：permission denied')
+  if(deferred)return new Promise(resolve=>resolveList=resolve)
+  return [...listing]
+ }
+ throw new Error('意外接口：'+name)
+}})
+await import('../src/main.ts')
+const state=document.querySelector('#app').__vue_app__._instance.setupState
+const assert=(condition,message)=>{if(!condition)throw new Error(message)}
+const flush=async()=>{for(let i=0;i<25;i++)await nextTick()}
+const menu=()=>document.querySelector('.file-context-menu')
+const action=()=>[...menu()?.querySelectorAll('button')||[]].find(button=>button.textContent.trim()==='刷新')
+const close=async()=>{menu()?.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));await flush()}
+const context=async(selection=[])=>{
+ state.selected=selection;await flush()
+ const target=selection.length?[...document.querySelectorAll('tbody tr')].find(row=>row.querySelector('.file-label')?.title===selection[0].path):document.querySelector('.file-panel')
+ target.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,clientX:innerWidth-2,clientY:innerHeight-2}));await flush()
+ assert(action(),'缺少固定刷新项')
+ const rect=menu().getBoundingClientRect()
+ assert(rect.left>=0&&rect.top>=0&&rect.right<=innerWidth&&rect.bottom<=innerHeight,'菜单超出窗口')
+}
+try{
+ await flush()
+ for(const selection of [[folder],[file],[folder,file]]){
+  await context(selection)
+  assert(action().disabled,'条目菜单刷新未置灰')
+  const count=calls.length;action().click();await flush()
+  assert(calls.length===count,'置灰刷新仍调用接口')
+  menu().dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true}));await flush()
+  assert(document.activeElement!==action(),'键盘聚焦了置灰刷新')
+  await close()
+ }
+ state.changeSort('modified');state.changeSort('modified');await flush()
+ const history=[...state.history],historyIndex=state.historyIndex,revision=state.centerRevision
+ listing=[folder,added]
+ await context();assert(!action().disabled,'空白处刷新不可用')
+ action().click();await flush()
+ assert(!menu()&&state.path==='/refresh'&&state.entries.some(e=>e.path===added.path)&&!state.entries.some(e=>e.path===file.path),'未关闭菜单或未重新读取当前目录')
+ assert(state.sortField==='modified'&&state.sortDirection==='desc'&&JSON.stringify(state.history)===JSON.stringify(history)&&state.historyIndex===historyIndex,'刷新改变排序或导航历史')
+ assert(state.centerRevision===revision&&!state.tasks.length,'刷新创建了任务或日志')
+ listing=[];await context();action().click();await flush()
+ assert(!state.entries.length,'刷新未显示空目录')
+ listing=[file];await context();assert(!action().disabled,'空目录不能刷新');action().click();await flush()
+ assert(state.entries[0].path===file.path,'空目录刷新未显示新增项目')
+ fail=true;await context();action().click();await flush()
+ assert(state.path==='/refresh'&&state.entries[0].path===file.path&&!menu()&&document.querySelector('.toast-container').textContent.includes('permission denied'),'刷新失败改变目录或没有提示')
+ fail=false;deferred=true;await context();action().click();await flush()
+ assert(state.browserLoading,'刷新未进入加载状态')
+ await context();assert(action().disabled,'加载中刷新未置灰')
+ const count=calls.length;action().click();await flush();assert(calls.length===count,'加载中重复刷新')
+ resolveList([file]);deferred=false;await flush();await close()
+ assert(calls.every(c=>['Home','Tasks','List'].includes(c.name))&&calls.filter(c=>c.name==='List').every(c=>c.args[0]==='/refresh'),'刷新调用写入接口或错误目录')
+ window.contextRefreshResult={passed:true,refreshes:calls.filter(c=>c.name==='List').length-1};document.title='PASS · 右键刷新检查'
+}catch(error){window.contextRefreshResult={passed:false,error:String(error)};document.title='FAIL · '+error.message;console.error(error)}
+</script></body></html>

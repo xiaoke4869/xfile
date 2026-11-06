@@ -1,4 +1,5 @@
 export interface Entry {path:string;name:string;dir:boolean;size:number;modified:number;link:boolean}
+export interface SizeTask {path:string;status:'queued'|'running'|'succeeded'|'failed';bytes:number;files:number;folders:number;error:string}
 export interface Source {path:string;depth:number}
 export interface Config {mode?:string;duplicate?:string;sources:Source[];target:string;prefix:boolean;rule:string;separator:string;length:number;pattern:string;unmatched:string;strict:boolean}
 export interface Move {source:string;target:string;relative:string;size:number;modified:number;renamed:boolean}
@@ -10,5 +11,6 @@ export interface TreeNode {key:string;name:string;dir:boolean;existing:boolean;r
 
 export interface OperationItem {source:string;target:string;error:string}
 export interface OperationResult {items:OperationItem[]}
+export interface GroupEntriesResult extends OperationResult {folder:string}
 export interface RenameConfig {mode:'single'|'replace'|'add'|'format';name:string;find:string;replace:string;text:string;format:string;position:'before'|'after';start:number}
 export interface RenamePreview {items:OperationItem[];total:number;changed:number;issues:string[]}

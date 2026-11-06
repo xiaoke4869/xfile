@@ -1,0 +1,145 @@
+// Run with a Playwright Page and Vite. Reuses the simulated Wails/filesystem fixture.
+export default async function(page,origin='http://127.0.0.1:5173'){
+ const assert=(value,message)=>{if(!value)throw new Error(message)}
+ const checks=[]
+ const frame=()=>page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))
+ const panel=index=>page.locator('.file-panel').nth(index)
+ const row=(index,path)=>panel(index).locator('tbody tr').filter({has:page.locator(`.file-label[title="${path}"]`)})
+ const state=()=>page.evaluate(()=>window.dragFixture.state.panes.map(p=>({id:p.id,path:p.path,search:p.search,selected:p.selected.map(e=>e.path),sort:p.sortField,direction:p.sortDirection,page:p.page,expanded:Object.keys(p.expandedDirectories),history:[...p.history]})))
+ const split=()=>page.getByRole('button',{name:'分屏',exact:true}).click()
+ const fresh=async(target='/drag/00-target')=>{
+  await page.goto(origin+'/tests/file-drag.html');await page.waitForFunction(()=>window.dragFixture?.state.path==='/drag')
+  await page.evaluate(()=>window.dragFixture.compact());await split()
+  await page.evaluate(async target=>{const s=window.dragFixture.state;await s.navigate(target,true,true,s.panes[1])},target)
+  await frame()
+ }
+ const select=async(index,paths)=>{await page.evaluate(({index,paths})=>{const f=window.dragFixture;f.state.panes[index].selected=paths.map(path=>f.listing.find(e=>e.path===path))},{index,paths});await frame()}
+ const point=async(index,path)=>{const bounds=await row(index,path).locator('.file-label').boundingBox();assert(bounds,'找不到项目 '+path);return {x:bounds.x+Math.min(12,bounds.width/2),y:bounds.y+bounds.height/2}}
+ const blank=async index=>{const bounds=await panel(index).locator('.table-scroll').boundingBox();return {x:bounds.x+bounds.width*.6,y:bounds.y+bounds.height-60}}
+ const begin=async(index,path,to)=>{const from=await point(index,path);await page.mouse.move(from.x,from.y);await page.mouse.down();await page.mouse.move(to.x,to.y,{steps:8});await frame()}
+ const release=async()=>{await page.mouse.up();await frame()}
+ const request=()=>page.evaluate(()=>{const r=window.dragFixture.request;return r?{name:r.name,args:r.args,paths:r.paths}:null})
+ const finish=async failure=>{const result=await page.evaluate(failure=>window.dragFixture.finish(failure),failure||'');await frame();return result}
+ const noDrag=async()=>assert(await page.locator('.file-drag-preview,.drop-folder,.drop-group,.drop-current-directory,.drag-source,.selection-marquee').count()===0,'拖拽状态残留')
+ const a='/drag/10-a.txt',b='/drag/11-b.txt',c='/drag/12-c.txt',target='/drag/00-target',sub=target+'/sub',receiver=target+'/receiver.txt',source='/drag/01-source',other='/drag/02-other'
+ await page.setViewportSize({width:1440,height:860})
+
+ await fresh()
+ await panel(1).focus()
+ for(let count=3;count<=5;count++){await split();assert(await panel(0).count()&&await page.locator('.file-panel').count()===count,'新增屏数量错误')}
+ assert(await page.getByRole('button',{name:'分屏',exact:true}).isDisabled(),'5 屏未禁用按钮')
+ let panes=await state();assert(panes.slice(2).every(p=>p.path==='/drag'),'新增屏没有继承最左侧主屏路径')
+ await page.evaluate(()=>window.dragFixture.state.splitPane());assert(await page.locator('.file-panel').count()===5,'绕过按钮超过 5 屏')
+ const widths=await page.locator('.file-panel').evaluateAll(elements=>elements.map(el=>el.getBoundingClientRect().width))
+ assert(Math.max(...widths)-Math.min(...widths)<2,'各屏宽度不同')
+ assert(await page.locator('.browser-content').evaluate(el=>el.scrollWidth>el.clientWidth),'5 屏未提供横向滚动')
+ await page.getByRole('button',{name:'关闭分屏 1',exact:true}).click();await frame()
+ assert(!(await page.getByRole('button',{name:'分屏',exact:true}).isDisabled()),'关闭后未恢复分屏按钮')
+ await split();assert((await state()).at(-1).path===target,'关闭主屏后未从新主屏继承路径')
+ while(await page.locator('.file-panel').count()>1){await page.getByRole('button',{name:'关闭分屏 1',exact:true}).click();await frame()}
+ assert(await page.locator('.close-pane').count()===0,'最后一屏仍有关闭入口')
+ await page.evaluate(()=>{const s=window.dragFixture.state;s.closePane(s.panes[0])});assert(await page.locator('.file-panel').count()===1,'允许关闭最后一屏')
+ assert(await page.evaluate(()=>window.dragFixture.calls.every(call=>!['TransferEntries','GroupFiles','DeleteEntries'].includes(call.name))),'关闭屏修改了文件')
+ checks.push('1–5 屏上限、禁用/恢复、等宽横向滚动、主屏继承与至少一屏')
+
+ await fresh()
+ await row(0,a).locator('.file-label').click()
+ await panel(1).getByRole('button',{name:'展开 sub',exact:true}).click();await frame()
+ await panel(1).getByRole('button',{name:'大小',exact:true}).click()
+ await page.getByRole('button',{name:'搜索当前目录',exact:true}).click()
+ await page.getByRole('searchbox',{name:'搜索文件或文件夹名称'}).fill('receiver')
+ await page.getByRole('button',{name:'查看结果',exact:true}).click();await frame()
+ panes=await state()
+ assert(panes[0].selected[0]===a&&panes[0].search===''&&panes[0].sort==='name'&&!panes[0].expanded.length,'第二屏影响第一屏状态')
+ assert(panes[1].search==='receiver'&&panes[1].sort==='size'&&panes[1].expanded.includes(sub),'第二屏状态未保留')
+ await page.evaluate(()=>{window.dragFixture.state.panes[0].directorySizes['/drag/01-source']=1024})
+ await page.getByRole('button',{name:'刷新当前目录',exact:true}).click();await frame()
+ assert(await page.evaluate(()=>{const p=window.dragFixture.state.panes[0];return p.selected[0]?.path==='/drag/10-a.txt'&&p.directorySizes['/drag/01-source']===1024}),'手动刷新第二屏改动了第一屏状态')
+ await row(0,b).locator('.file-label').click();await frame()
+ assert((await state())[1].search==='receiver','激活第一屏清空第二屏搜索')
+ await page.evaluate(()=>{const s=window.dragFixture.state;s.panes[1].search=''});await frame()
+ await row(1,sub).locator('.file-label').dblclick();await frame()
+ assert((await state())[0].path==='/drag'&&(await state())[1].path===sub,'目录导航未隔离')
+ await panel(1).getByRole('button',{name:'后退',exact:true}).click();await frame()
+ assert((await state())[1].path===target,'分屏独立历史后退失败')
+ // Starting a marquee in an inactive pane must work on the first pointer gesture.
+ await row(0,c).locator('.file-label').click();const bounds=await panel(1).locator('.table-scroll').boundingBox()
+ await page.mouse.move(bounds.x+bounds.width*.7,bounds.y+bounds.height-80);await page.mouse.down();await page.mouse.move(bounds.x+20,bounds.y+48,{steps:8});await frame()
+ assert(await panel(1).locator('.selection-marquee').count()===1,'未激活屏首次框选未开始')
+ await page.mouse.up();await frame();await noDrag()
+ checks.push('各屏选择、搜索、排序、展开、导航历史及首次激活框选隔离')
+
+ for(const paths of [[a],[a,b],[source],[source,other],[a,source]]){
+  await fresh();await select(0,paths);await begin(0,paths[0],await blank(1))
+  assert(await panel(1).locator('.drop-current-directory').count()===1,'跨屏空白落点没有高亮')
+  assert((await page.locator('.file-drag-preview').textContent()).includes(`移动 ${paths.length} 个项目`),'跨屏空白数量错误')
+  await release();const job=await request()
+  assert(job?.name==='TransferEntries'&&job.args[1]===target&&JSON.stringify(job.paths)===JSON.stringify(paths),'跨屏空白移动参数错误')
+  await finish();await noDrag()
+  assert(await page.evaluate(paths=>{const f=window.dragFixture;return paths.every(path=>!f.state.panes[0].entries.some(e=>e.path===path)&&f.state.panes[1].entries.some(e=>e.path==='/drag/00-target/'+path.split('/').pop()))&&f.logs[0].status==='succeeded'},paths),'跨屏完成后来源、目标或日志未刷新')
+ }
+ checks.push('跨屏空白处单/多文件、单/多目录、混选直接移动及双屏刷新日志')
+
+ await fresh();await begin(0,a,await point(1,sub));assert(await row(1,sub).evaluate(el=>el.classList.contains('drop-folder')),'跨屏目录行未高亮');await release()
+ assert((await request()).args[1]===sub,'跨屏目录行目标错误');await finish();await noDrag()
+ await fresh();await begin(1,receiver,await blank(0));await release();assert((await request()).args[1]==='/drag','反向跨屏移动错误');await finish();await noDrag()
+ await fresh();await panel(0).getByRole('button',{name:'展开 01-source',exact:true}).click();await frame()
+ await begin(0,source+'/child.txt',await blank(1));await release();assert((await request()).paths[0]===source+'/child.txt','展开目录内项目不能跨屏移动');await finish()
+ await fresh();await select(0,[a,b]);await begin(0,a,await point(1,receiver))
+ assert(await row(1,receiver).evaluate(el=>el.classList.contains('drop-group')),'跨屏文件合成未高亮');await release()
+ assert((await request()).name==='GroupFiles'&&(await request()).paths.length===3,'跨屏合成未包含接收文件')
+ const grouped=await finish();assert(await row(1,grouped).count()===1&&(await state())[1].selected[0]===grouped,'跨屏合成目标屏未选中新目录')
+ await fresh();await select(0,[a,b]);await begin(0,a,await point(1,target+'/sub/deep.txt').catch(async()=>{await panel(1).getByRole('button',{name:'展开 sub',exact:true}).click();await frame();return point(1,target+'/sub/deep.txt')}));await release()
+ const nested=await finish();assert(await row(1,nested).count()===1,'跨屏嵌套合成未保留并展开祖先')
+ checks.push('跨屏目录行、反向移动、展开内容及文件/嵌套文件合成和选中')
+
+ await fresh('/drag');await begin(0,a,await point(1,a));await release();assert(!await request(),'同路径分屏中的自身仍可接收')
+ await begin(0,a,await blank(1));await release();assert(!await request(),'同目录跨屏空白产生了重复移动')
+ await fresh();await begin(0,target,await point(1,sub));await release();assert(!await request(),'允许把目录移入自身子目录')
+ await begin(0,source,await point(1,receiver));await release();assert(!await request(),'目录允许向文件合成')
+ const heading=await panel(1).locator('thead').boundingBox();await begin(0,a,{x:heading.x+30,y:heading.y+10});await release();assert(!await request(),'表头成为落点')
+ const header=await panel(1).locator('.pane-header').boundingBox();await begin(0,a,{x:header.x+header.width*.5,y:header.y+10});await release();assert(!await request(),'路径栏成为落点')
+ await begin(0,a,await blank(1));await page.keyboard.press('Escape');await release();assert(!await request(),'Esc 取消仍执行跨屏移动')
+ await begin(0,a,await blank(1));await page.evaluate(()=>{const s=window.dragFixture.state;s.closePane(s.panes[1])});await release();assert(!await request(),'关闭目标屏后仍执行移动');await noDrag()
+ checks.push('同路径、自身子目录、目录向文件、表头/路径栏落点、Esc 和关闭屏取消保护')
+
+ await fresh();await select(0,[a,b]);await begin(0,a,await blank(1));await release();await finish(b)
+ assert(await row(0,b).count()===1&&await row(0,a).count()===0&&await row(1,target+'/10-a.txt').count()===1,'跨屏部分失败未保留失败来源或成功目标')
+ assert(await page.evaluate(()=>window.dragFixture.logs[0].status==='partial_failed'),'部分失败日志缺失')
+ await fresh();await begin(0,a,await blank(1));await release();await finish('missing')
+ assert(await row(0,a).count()===1,'目标失效丢失来源');await noDrag()
+ await fresh();await begin(0,a,await blank(1));await release()
+ const count=await page.evaluate(()=>window.dragFixture.calls.filter(c=>c.name==='TransferEntries').length)
+ await begin(1,receiver,await blank(0));await release()
+ assert(await page.evaluate(()=>window.dragFixture.calls.filter(c=>c.name==='TransferEntries').length)===count,'跨屏操作忙碌时重复提交')
+ await page.evaluate(async()=>{const s=window.dragFixture.state;await s.navigate('/elsewhere',true,true,s.panes[1]);s.closePane(s.panes[0])});await finish()
+ assert((await state())[0].path==='/elsewhere','来源屏关闭或目标导航后被拉回旧路径')
+ checks.push('部分失败、失效目标、忙碌互斥、操作中导航和关闭来源屏后正确完成')
+
+ await fresh();await page.evaluate(async()=>{const f=window.dragFixture,s=f.state;f.deferList('/slow');window.slowPane=s.navigate('/slow',true,true,s.panes[1]);await s.navigate('/newer',true,true,s.panes[1]);s.activatePane(s.panes[0]);f.releaseList();await window.slowPane});await frame()
+ assert((await state())[0].path==='/drag'&&(await state())[1].path==='/newer','过期导航污染另一个屏或覆盖新路径')
+ await page.evaluate(async()=>{const f=window.dragFixture,s=f.state;f.deferList('/slow');window.slowPane=s.navigate('/slow',true,true,s.panes[1]);s.closePane(s.panes[1]);f.releaseList();await window.slowPane});await frame()
+ assert((await state()).length===1&&(await state())[0].path==='/drag','关闭屏的迟到导航污染主屏')
+ await fresh();await begin(0,a,await blank(1));await release()
+ await page.evaluate(()=>{const f=window.dragFixture,s=f.state;f.deferList('/loading');window.slowPane=s.navigate('/loading',true,true,s.panes[1])})
+ await finish();await page.evaluate(async()=>{window.dragFixture.releaseList();await window.slowPane});await frame()
+ assert((await state())[1].path==='/loading','操作结束时的刷新打断了目标屏正在进行的导航')
+ checks.push('各屏异步导航隔离、迟到响应、关闭屏清理与读取新目录期间的刷新')
+
+ await fresh();await split();await split();await split()
+ await page.locator('.browser-content').evaluate(el=>el.scrollLeft=0);await frame()
+ await begin(0,a,await blank(1));const viewport=await page.locator('.browser-content').boundingBox()
+ await page.mouse.move(viewport.x+viewport.width-3,viewport.y+viewport.height*.6,{steps:6})
+ await page.waitForFunction(()=>document.querySelector('.browser-content').scrollLeft>80)
+ await page.keyboard.press('Escape');await release();await noDrag()
+ assert(!await request(),'横向滚动取消后仍移动')
+ assert(await page.evaluate(()=>window.dragFixture.unhandled.length===0),'存在未处理异步异常')
+ await page.evaluate(async()=>{const s=window.dragFixture.state;await s.navigate('/drag/00-target',true,true,s.panes[4]);document.querySelector('.browser-content').scrollLeft=0});await frame()
+ await begin(0,a,await blank(1));await page.mouse.move(viewport.x+viewport.width-3,viewport.y+viewport.height*.6,{steps:6})
+ await page.waitForFunction(()=>{const el=document.querySelector('.browser-content');return el.scrollLeft>=el.scrollWidth-el.clientWidth-2})
+ const fifth=await blank(4);await page.mouse.move(fifth.x,fifth.y,{steps:5});await release()
+ assert((await request())?.args[1]===target,'不能从第 1 屏横向拖动到第 5 屏')
+ await finish();assert(await row(4,target+'/10-a.txt').count()===1,'第 5 屏没有刷新实际落点');await noDrag()
+ checks.push('多屏拖拽横向边缘滚动、取消和第 1 屏到第 5 屏移动')
+ return {passed:true,checks}
+}

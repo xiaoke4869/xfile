@@ -19,7 +19,7 @@ setTransport({async call(object,method,windowName,request){
  if(name==='Home')return {home:'/sizes',locations:[]}
  if(name==='List')return path==='/sizes/a'?[nested]:listing
  if(name==='Tasks')return []
- if(name==='CountDirectory'){
+ if(name==='MeasureDirectory'){
   calls.push(path)
   return new Promise((resolve,reject)=>pending.push({path,resolve,reject}))
  }
@@ -60,7 +60,8 @@ try{
  state.search='b';await flush();assert(cell('b').textContent==='512 B','搜索丢失临时大小')
  state.search='';await flush()
  button('展开 a').click();await flush()
- button('计算文件夹 a/nested 的大小').click();await flush();await finish(200)
+ assert(pending[0]?.path===nested.path,'成功父目录展开后未自动计算下一级')
+ await finish(200)
  assert(cell('a/nested').textContent==='200 B','展开子目录未支持大小计算')
  button('收起 a').click();await flush();button('展开 a').click();await flush()
  assert(cell('a/nested').textContent==='200 B','折叠展开丢失临时结果')
@@ -69,7 +70,9 @@ try{
  batch().click();await flush();pending.shift().reject(new Error('没有读取权限'));await flush()
  assert(pending[0].path==='/sizes/b'&&cell('a').textContent==='计算','单目录失败阻塞批量或展示错误大小')
  await finish(2);await finish(3)
- assert(document.querySelector('.toast-container').textContent.includes('没有读取权限'),'错误未提示')
+ button('任务中心').click();await flush()
+ assert(document.querySelector('.task-center-panel').textContent.includes('没有读取权限'),'失败未收进任务中心')
+ assert(!document.querySelector('.toast-container').textContent.includes('没有读取权限'),'计算失败仍逐条弹出')
  button('计算文件夹 a 的大小').click();await flush()
  const late=pending.shift(),before=calls.length
  await state.navigate('/other');await flush();late.resolve({bytes:999,files:1,folders:0});await flush()

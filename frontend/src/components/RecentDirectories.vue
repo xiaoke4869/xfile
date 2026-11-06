@@ -1,10 +1,11 @@
 <script setup lang="ts">
+import { vScrollbars } from '../scrollbars'
 import { nextTick,onMounted,onUnmounted,ref,useId } from 'vue'
 import { Clock,Close,Delete } from '@element-plus/icons-vue'
 import FileIcon from './FileIcon.vue'
 import { base,pathKey } from '../format'
 
-const emit=defineEmits<{navigate:[path:string];error:[message:string]}>()
+const emit=defineEmits<{navigate:[path:string];error:[message:string];open:[]}>()
 const id=useId(),root=ref<HTMLElement>(),trigger=ref<HTMLButtonElement>(),panel=ref<HTMLElement>(),opened=ref(false),paths=ref<string[]>([])
 const storageKey='xfile.recentDirectories'
 function save(next:string[]){
@@ -15,7 +16,7 @@ function record(path:string){if(path)save([path,...paths.value.filter(other=>pat
 function close(restore=false){opened.value=false;if(restore)trigger.value?.focus()}
 async function toggle(){
  if(opened.value){close();return}
- opened.value=true;await nextTick();panel.value?.querySelector<HTMLButtonElement>('.close-recent')?.focus()
+ opened.value=true;emit('open');await nextTick();panel.value?.querySelector<HTMLButtonElement>('.close-recent')?.focus()
 }
 function outside(event:PointerEvent){if(!root.value?.contains(event.target as Node))close()}
 function visit(path:string){close(true);emit('navigate',path)}
@@ -36,7 +37,7 @@ defineExpose({record,close})
   <button ref="trigger" class="icon-button" aria-label="最近访问目录" title="最近访问目录" aria-haspopup="dialog" :aria-expanded="opened" :aria-controls="id" @click="toggle"><Clock/></button>
   <section v-if="opened" :id="id" ref="panel" class="recent-panel" role="dialog" aria-label="最近访问目录">
    <header><div><h2>最近目录</h2><p>{{paths.length}} / 50 个目录</p></div><button class="icon-button close-recent" aria-label="关闭最近目录" @click="close(true)"><Close/></button></header>
-   <ul v-if="paths.length" class="recent-list">
+   <ul v-scrollbars v-if="paths.length" class="recent-list">
     <li v-for="path in paths" :key="path"><button class="recent-visit" :title="path" :aria-label="`进入最近目录 ${path}`" @click="visit(path)"><FileIcon :name="path" dir/><span><strong>{{base(path)}}</strong><small>{{path}}</small></span></button><button class="icon-button recent-remove" :aria-label="`移除最近记录 ${path}`" title="移除这条记录" @click="remove(path)"><Close/></button></li>
    </ul>
    <p v-else class="recent-empty" role="status">暂无最近访问目录</p>

@@ -35,6 +35,8 @@ func (s *FileService) fileOperation(kind string, paths []string, target string, 
 	s.mu.Lock()
 	s.fileOperationID = t.ID
 	s.mu.Unlock()
+	s.publishFileTask(t)
+	defer func() { s.publishFileTask(t) }()
 	result, operationErr := run()
 	if len(result.Items) > 0 {
 		t.Items = result.Items
@@ -62,6 +64,8 @@ func (s *FileService) fileOperation(kind string, paths []string, target string, 
 	t.Phase = "已结束"
 	t.Finished = time.Now()
 	if err := core.AtomicJSON(filepath.Join(t.Directory, "summary.json"), t); err != nil {
+		t.Status = "needs_review"
+		t.Error = errors.Join(operationErr, err).Error()
 		return result, errors.Join(operationErr, fmt.Errorf("文件操作已结束，但保存结果日志失败，请核对文件：%w", err))
 	}
 	var report strings.Builder
@@ -73,9 +77,22 @@ func (s *FileService) fileOperation(kind string, paths []string, target string, 
 		fmt.Fprintf(&report, "错误：%s\n", t.Error)
 	}
 	if err := os.WriteFile(filepath.Join(t.Directory, "report.md"), []byte(report.String()), 0600); err != nil {
+		t.Status = "needs_review"
+		t.Error = errors.Join(operationErr, err).Error()
 		return result, errors.Join(operationErr, fmt.Errorf("文件操作和结果已保存，但生成报告失败：%w", err))
 	}
 	return result, operationErr
+}
+
+func (s *FileService) publishFileTask(t core.Task) {
+	// List/detail endpoints retain full results; live notifications only need a summary.
+	t.Items = nil
+	s.mu.Lock()
+	s.fileTask = t
+	s.mu.Unlock()
+	if s.app != nil {
+		s.app.Event.Emit("xfile:operation", t)
+	}
 }
 
 func (s *FileService) normalizeTask(t *core.Task) {
