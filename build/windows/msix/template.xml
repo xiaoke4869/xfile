@@ -17,7 +17,7 @@
         PackageDisplayName="XFile"
         PublisherName="CN=XFile"
         PublisherDisplayName="XFile"
-        Version="0.0.1.0"
+        Version="0.0.2.0"
         PackageDescription="本地文件浏览与批量归并">
         <Capabilities>
             <Capability Name="runFullTrust" />

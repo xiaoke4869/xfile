@@ -10,11 +10,11 @@
         <key>CFBundleIdentifier</key>
             <string>io.xfile.desktop</string>
         <key>CFBundleVersion</key>
-            <string>0.0.1</string>
+            <string>0.0.2</string>
         <key>CFBundleGetInfoString</key>
             <string>本地文件浏览与批量归并</string>
         <key>CFBundleShortVersionString</key>
-            <string>0.0.1</string>
+            <string>0.0.2</string>
         <key>CFBundleIconFile</key>
             <string>icons</string>
         <key>CFBundleIconName</key>
